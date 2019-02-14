@@ -21,7 +21,7 @@ AudioComponent::AudioComponent()
     
     // Initialise time to 0 and create a grain in the stack
     time = 0;
-    grainStack.add(Grain(88200, 44100, 0));
+    //grainStack.add(Grain(88200, 44100, 0));
     
     // Start the thread to manage scheduler
     startThread();
@@ -72,20 +72,23 @@ void AudioComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFi
     
     for (auto sample = 0; sample < nOutputSamplesRemaining; ++sample)
     {
-        if (/*localGrainStack[0].onset < time*/1)
+        for (auto i = 0; i < localGrainStack.size(); ++i)
         {
-            if (/*time < (localGrainStack[0].onset + localGrainStack[0].length)*/1)
+            if (localGrainStack[i].onset < time)
             {
-                localGrainStack[0].processAudio(bufferToFill,
-                                                *buffer,
-                                                nInputChannels,
-                                                nOutputChannels,
-                                                nOutputSamplesRemaining,
-                                                nInputSamples,
-                                                time);
-                ++time;
+                if (time < (localGrainStack[i].onset + localGrainStack[i].length))
+                {
+                    localGrainStack[i].processAudio(bufferToFill,
+                                                    *buffer,
+                                                    nInputChannels,
+                                                    nOutputChannels,
+                                                    nOutputSamplesRemaining,
+                                                    nInputSamples,
+                                                    time);
+                }
             }
         }
+        ++time;
     }
 }
 
@@ -108,17 +111,32 @@ void AudioComponent::run()
     {
         std::cout << "Grain Stack Size: " << grainStack.size() << std::endl;
         
+        // Delete grains
         if (grainStack.size() > 0)
         {
             for (auto i = grainStack.size() - 1; i >= 0; --i)
             {
                 auto grainEnd = grainStack[i].onset + grainStack[i].length;
                 auto hasEnded = grainEnd < time;
+                if (hasEnded)
+                {
+                    grainStack.remove(i);
+                }
                 std::cout   << "hasEnded: "     << hasEnded
                             << "\tgrainEnd: "   << grainEnd
                             << "\ttime: "       << time
                             << std::endl;
             }
+        }
+        
+        // Add grains
+        if (currentBuffer != nullptr)
+        {
+            auto nSamples = currentBuffer->getAudioSampleBuffer()->getNumSamples();
+            int onset = 1000;
+            int length = 44100;
+            int startPosition = -1000;
+            grainStack.add(Grain((int)time + onset, length, wrap(startPosition, 0, nSamples)));
         }
         wait(250);
     }
@@ -151,4 +169,17 @@ void AudioComponent::checkBuffers()
             buffers.remove(i);
         }
     }
+}
+
+//==============================================================================
+int AudioComponent::wrap(int val, const int low, const int high)
+{
+    auto range_size = high - low + 1;
+    
+    if (val < low)
+    {
+        val += range_size * ((low - val) / range_size + 1);
+    }
+    
+    return low + (val - low) % range_size;
 }

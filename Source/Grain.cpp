@@ -41,8 +41,8 @@ void Grain::processAudio(const AudioSourceChannelInfo& bufferToFill,
         auto* channelData = bufferToFill.buffer->getWritePointer(channel);
         const auto* fileData = buffer.getReadPointer(channel % nInputChannels);
         
-        //auto position = (time - onset) + startPosition;
+        auto position = (time - onset) + startPosition;
         
-        channelData[time % nBufToFillSamples] += fileData[/*position*/time % nBufSamples];
+        channelData[time % nBufToFillSamples] += fileData[position/*time*/ % nBufSamples];
     }
 }

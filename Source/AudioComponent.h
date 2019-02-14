@@ -36,6 +36,10 @@ public:
     void checkBuffers();
     
 private:
+    //==============================================================================
+    int wrap(int val, const int low, const int high);
+    
+    //==============================================================================
     AudioFormatManager formatManager;
     
     long long int time;
