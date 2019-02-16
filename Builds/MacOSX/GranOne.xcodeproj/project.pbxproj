@@ -69,6 +69,10 @@
 			isa = PBXBuildFile;
 			fileRef = 29FB2E6DCAC682994541CF0D;
 		};
+		D05FD9208045413A765F08BE = {
+			isa = PBXBuildFile;
+			fileRef = 5029E09D5EE606BF09C5C8AE;
+		};
 		C0BA4EB715E298938C284D8C = {
 			isa = PBXBuildFile;
 			fileRef = DEC035AA649DB260E5B78348;
@@ -229,6 +233,13 @@
 			path = "../../JuceLibraryCode/include_juce_video.mm";
 			sourceTree = "SOURCE_ROOT";
 		};
+		5029E09D5EE606BF09C5C8AE = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			name = Envelope.cpp;
+			path = ../../Source/Envelope.cpp;
+			sourceTree = "SOURCE_ROOT";
+		};
 		5265232311BA00535F86B92C = {
 			isa = PBXFileReference;
 			lastKnownFileType = wrapper.framework;
@@ -297,6 +308,13 @@
 			lastKnownFileType = sourcecode.cpp.objcpp;
 			name = "include_juce_audio_devices.mm";
 			path = "../../JuceLibraryCode/include_juce_audio_devices.mm";
+			sourceTree = "SOURCE_ROOT";
+		};
+		7520AC5D59852E1F53831112 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			name = Envelope.h;
+			path = ../../Source/Envelope.h;
 			sourceTree = "SOURCE_ROOT";
 		};
 		7899050CF24A6C4B9892DC66 = {
@@ -540,6 +558,8 @@
 		D0A76C2AE61401411709CD8D = {
 			isa = PBXGroup;
 			children = (
+				5029E09D5EE606BF09C5C8AE,
+				7520AC5D59852E1F53831112,
 				DEC035AA649DB260E5B78348,
 				BE00F992911BEF3C9A7DDD00,
 				C73AAD4B64EA74388DC43897,
@@ -866,6 +886,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D05FD9208045413A765F08BE,
 				C0BA4EB715E298938C284D8C,
 				36DEA9086934699B5D9F2AB8,
 				9A722E9495CE633E6581A817,

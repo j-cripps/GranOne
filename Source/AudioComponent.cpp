@@ -174,12 +174,12 @@ void AudioComponent::checkBuffers()
 //==============================================================================
 int AudioComponent::wrap(int val, const int low, const int high)
 {
-    auto range_size = high - low + 1;
+    auto rangeSize = high - low + 1;
     
     if (val < low)
     {
-        val += range_size * ((low - val) / range_size + 1);
+        val += rangeSize * ((low - val) / rangeSize + 1);
     }
     
-    return low + (val - low) % range_size;
+    return low + (val - low) % rangeSize;
 }
