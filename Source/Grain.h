@@ -11,11 +11,13 @@
 #pragma once
 
 #include "../JuceLibraryCode/JuceHeader.h"
+#include "Envelope.h"
 
 class Grain
 {
 public:
-    Grain(int onset, int length, int startPosition);
+    //==============================================================================
+    Grain(int onset, const int length, int startPosition);
     Grain();
     ~Grain();
     
@@ -23,6 +25,7 @@ public:
     int length;
     int startPosition;
     
+    //==============================================================================
     void processAudio(const AudioSourceChannelInfo& bufferToFill,
                       AudioSampleBuffer& buffer,
                       int nInputChannels,
@@ -30,4 +33,16 @@ public:
                       int nBufToFillSamples,
                       int nBufSamples,
                       long long int time);
+    
+    void constructEnvelope(std::shared_ptr<Array<float, CriticalSection>> envBuffer,
+                           envType env,
+                           const int nSamples,
+                           float amplitude);
+    
+    void printEnvelope();
+    
+private:
+    //==============================================================================
+    unsigned int envPosition;
+    std::shared_ptr<Array<float, CriticalSection>> envBuffer;
 };

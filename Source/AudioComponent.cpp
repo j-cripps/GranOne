@@ -24,7 +24,7 @@ AudioComponent::AudioComponent()
     //grainStack.add(Grain(88200, 44100, 0));
     
     // Start the thread to manage scheduler
-    startThread();
+    startThread(8);
 }
 
 AudioComponent::~AudioComponent()
@@ -48,6 +48,7 @@ void AudioComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRa
 
 void AudioComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFill)
 {
+    kdebug_signpost_start(2, 0, 0, 0, 3);
     // This is the part that seperates this thread from the previous by making a new
     // copy, then checking if buffer is not null pointer
     ReferenceCountedBuffer::Ptr retainedBuffer(currentBuffer);
@@ -64,7 +65,8 @@ void AudioComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFi
     }
     
     // Create local copy of the grainstack so that it cannot be changed by another thread mid-operation
-    const Array<Grain> localGrainStack = grainStack;
+    const Array<Grain, CriticalSection> localGrainStack(grainStack);
+    //localGrainStack[0].printEnvelope();
     
     const auto nInputChannels = buffer->getNumChannels();
     const auto nOutputChannels = bufferToFill.buffer->getNumChannels();
@@ -76,8 +78,9 @@ void AudioComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFi
         {
             if (localGrainStack[i].onset < time)
             {
-                if (time < (localGrainStack[i].onset + localGrainStack[i].length))
+                if (time <= (localGrainStack[i].onset + localGrainStack[i].length))
                 {
+                    //std::cout << i << ": " << "time: " << time << "onset + length: " << (localGrainStack[i].onset + localGrainStack[i].length) << std::endl;
                     localGrainStack[i].processAudio(bufferToFill,
                                                     *buffer,
                                                     nInputChannels,
@@ -89,6 +92,7 @@ void AudioComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFi
             }
         }
         ++time;
+        kdebug_signpost_end(2, 0, 0, 0, 3);
     }
 }
 
@@ -109,7 +113,10 @@ void AudioComponent::run()
 {
     while (!threadShouldExit())
     {
-        std::cout << "Grain Stack Size: " << grainStack.size() << std::endl;
+        double time1 = Time::getMillisecondCounterHiRes();
+
+        //std::cout << "Grain Stack Size: " << grainStack.size() << std::endl;
+        kdebug_signpost_start(1,0,0,0,0);
         
         // Delete grains
         if (grainStack.size() > 0)
@@ -122,22 +129,33 @@ void AudioComponent::run()
                 {
                     grainStack.remove(i);
                 }
-                std::cout   << "hasEnded: "     << hasEnded
-                            << "\tgrainEnd: "   << grainEnd
-                            << "\ttime: "       << time
-                            << std::endl;
+                //std::cout   << "hasEnded: "     << hasEnded
+                      //      << "\tgrainEnd: "   << grainEnd
+                       //     << "\ttime: "       << time
+                      //      << std::endl;
             }
         }
         
         // Add grains
         if (currentBuffer != nullptr)
         {
+            // Make local copy of grain stack to avoid blocking audio thread
+            // Array<Grain, CriticalSection> localGrainStack(grainStack);
+            
             auto nSamples = currentBuffer->getAudioSampleBuffer()->getNumSamples();
             int onset = 1000;
             int length = 44100;
             int startPosition = -1000;
-            grainStack.add(Grain((int)time + onset, length, wrap(startPosition, 0, nSamples)));
+            for (int i = 0; i < 1; ++i)
+            {
+                grainStack.add(Grain((int)time + onset, length, wrap(startPosition, 0, nSamples)));
+            }
+            // Once all new grains have been created then replace grainStack with localGrainStack
+            // grainStack = localGrainStack;
         }
+        double time2 = Time::getMillisecondCounterHiRes();
+        std::cout << "Scheduler Elapsed: " << time2 - time1 << "\t" << "Stack Size: " << grainStack.size() << std::endl;
+        kdebug_signpost_end(1, 0, 0, 0, 0);
         wait(250);
     }
 }
