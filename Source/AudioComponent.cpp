@@ -63,10 +63,9 @@ void AudioComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFi
         bufferToFill.clearActiveBufferRegion();
         return;
     }
-    
+#if SCHED_THREAD
     // Create local copy of the grainstack so that it cannot be changed by another thread mid-operation
     const Array<Grain, CriticalSection> localGrainStack(grainStack);
-    //localGrainStack[0].printEnvelope();
     
     const auto nInputChannels = buffer->getNumChannels();
     const auto nOutputChannels = bufferToFill.buffer->getNumChannels();
@@ -92,8 +91,87 @@ void AudioComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFi
             }
         }
         ++time;
-        kdebug_signpost_end(2, 0, 0, 0, 3);
     }
+#else
+    
+    // Only run the scheduler every 10 samples
+    if (/*time % 1 == 0*/1)
+    {
+        Random random;
+        int offsetNum = random.nextInt(Range<int>(0, 1000));
+        int lengthNum = random.nextInt(Range<int>(2205, 44100));
+        int startNum = random.nextInt(Range<int>(0, nInputSamples-1));
+        float panNum = (random.nextFloat() * 2.0) - 1.0;
+        float rateNum = 0.5;
+        if (time % 5 == 0) rateNum = 1.0;
+        if (time % 7 == 0) rateNum = 2.0;
+        if (time % 9 == 0) rateNum = 1.5;
+        
+        // Delete grains
+        if (grainStack.size() > 0)
+        {
+            for (auto i = grainStack.size() - 1; i >= 0; --i)
+            {
+                auto grainEnd = grainStack[i].onset + grainStack[i].length;
+                auto hasEnded = grainEnd < time;
+                if (hasEnded)
+                {
+                    grainStack.remove(i);
+                }
+                //std::cout   << "hasEnded: "     << hasEnded
+                //      << "\tgrainEnd: "   << grainEnd
+                //      << "\ttime: "       << time
+                //      << std::endl;
+            }
+        }
+        
+        // Add grains
+        if (currentBuffer != nullptr)
+        {
+            if (grainStack.size() < GRAIN_LIMIT)
+            {
+                
+                auto nSamples = currentBuffer->getAudioSampleBuffer()->getNumSamples();
+                int onset = offsetNum;
+                int length = lengthNum;
+                int startPosition = startNum;
+                for (int i = 0; i < 1; ++i)
+                {
+                    grainStack.add(Grain((int)time + onset, length, wrap(startPosition, 0, nSamples), kTukey, 0.1, panNum, rateNum));
+                }
+                std::cout << grainStack.size() << std::endl;
+            }
+        }
+    }
+    
+    const auto nInputChannels = buffer->getNumChannels();
+    const auto nOutputChannels = bufferToFill.buffer->getNumChannels();
+    const auto nOutputSamplesRemaining = bufferToFill.numSamples;
+    //std::cout << grainStack.size() << std::endl;
+    
+    for (auto sample = 0; sample < nOutputSamplesRemaining; ++sample)
+    {
+        for (auto i = 0; i < grainStack.size(); ++i)
+        {
+            if (grainStack[i].onset < time)
+            {
+                if (time <= (grainStack[i].onset + grainStack[i].length))
+                {
+                    //std::cout << i << ": " << "time: " << time << "onset + length: " << (localGrainStack[i].onset + localGrainStack[i].length) << std::endl;
+                    grainStack[i].processAudio(bufferToFill,
+                                                    *buffer,
+                                                    nInputChannels,
+                                                    nOutputChannels,
+                                                    nOutputSamplesRemaining,
+                                                    nInputSamples,
+                                                    time);
+                }
+            }
+        }
+        ++time;
+    }
+#endif
+    kdebug_signpost_end(2, 0, 0, 0, 3);
 }
 
 void AudioComponent::releaseResources()
@@ -113,6 +191,7 @@ void AudioComponent::run()
 {
     while (!threadShouldExit())
     {
+#if SCHED_THREAD
         double time1 = Time::getMillisecondCounterHiRes();
 
         //std::cout << "Grain Stack Size: " << grainStack.size() << std::endl;
@@ -131,7 +210,7 @@ void AudioComponent::run()
                 }
                 //std::cout   << "hasEnded: "     << hasEnded
                       //      << "\tgrainEnd: "   << grainEnd
-                       //     << "\ttime: "       << time
+                       //      << "\ttime: "       << time
                       //      << std::endl;
             }
         }
@@ -144,11 +223,11 @@ void AudioComponent::run()
             
             auto nSamples = currentBuffer->getAudioSampleBuffer()->getNumSamples();
             int onset = 1000;
-            int length = 44100;
+            int length = 4410;
             int startPosition = -1000;
             for (int i = 0; i < 1; ++i)
             {
-                grainStack.add(Grain((int)time + onset, length, wrap(startPosition, 0, nSamples)));
+                grainStack.add(Grain((int)time + onset, length, wrap(startPosition, 0, nSamples), kTukey, 1.0));
             }
             // Once all new grains have been created then replace grainStack with localGrainStack
             // grainStack = localGrainStack;
@@ -156,6 +235,7 @@ void AudioComponent::run()
         double time2 = Time::getMillisecondCounterHiRes();
         std::cout << "Scheduler Elapsed: " << time2 - time1 << "\t" << "Stack Size: " << grainStack.size() << std::endl;
         kdebug_signpost_end(1, 0, 0, 0, 0);
+#endif
         wait(250);
     }
 }

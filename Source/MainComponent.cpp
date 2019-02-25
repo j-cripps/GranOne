@@ -85,7 +85,7 @@ void MainComponent::resized()
 
 void MainComponent::openButtonClicked()
 {
-    FileChooser chooser("Choose a WAV file shorter than 5 seconds", {}, "*.wav");
+    FileChooser chooser("Choose a WAV file shorter than 20 seconds", {}, "*.wav", "*.aiff");
     
     if (chooser.browseForFileToOpen())
     {
@@ -116,7 +116,7 @@ void MainComponent::checkForPathToOpen()
         {
             auto duration = reader->lengthInSamples/ reader->sampleRate;
             
-            if (duration < 5)
+            if (duration < 20)
             {
                 ReferenceCountedBuffer::Ptr newBuffer = new ReferenceCountedBuffer(file.getFileName(),
                                                                                    reader->numChannels,
@@ -136,8 +136,8 @@ void MainComponent::checkForPathToOpen()
             }
             else
             {
-                // File longer than 5 seconds so error
-                std::cerr << "File longer than set limit of 5s" << std::endl;
+                // File longer than 20 seconds so error
+                std::cerr << "File longer than set limit of 20s" << std::endl;
             }
         }
     }

@@ -52,6 +52,7 @@ private:
     // GUI Elements
     TextButton openButton;
     TextButton clearButton;
+    Slider densitySlider, offsetSlider, lengthSlider, startSlider, panSlider, rateSlider;
     
     String chosenPath;
     AudioFormatManager formatManager;

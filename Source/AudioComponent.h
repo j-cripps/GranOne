@@ -15,6 +15,9 @@
 #include "ReferenceCountedBuffer.h"
 #include "sys/kdebug_signpost.h"
 
+#define SCHED_THREAD 0
+#define GRAIN_LIMIT 100
+
 class AudioComponent    : public AudioAppComponent,
                           private Thread
 {
@@ -44,8 +47,11 @@ private:
     AudioFormatManager formatManager;
     
     long long int time;
+#if SCHED_THREAD
     Array<Grain, CriticalSection> grainStack;
-    
+#else
+    Array<Grain> grainStack;
+#endif
     // Keeps hold of all buffers until certain they are no longer needed by the audio thread
     ReferenceCountedArray<ReferenceCountedBuffer> buffers;
     ReferenceCountedBuffer::Ptr currentBuffer;
