@@ -69,6 +69,14 @@
 			isa = PBXBuildFile;
 			fileRef = 29FB2E6DCAC682994541CF0D;
 		};
+		FAF4B6BC982C1EFBF7B9E485 = {
+			isa = PBXBuildFile;
+			fileRef = F082795B43040DA9273B486A;
+		};
+		4BF3100094C2262667FE9C45 = {
+			isa = PBXBuildFile;
+			fileRef = 97DCEFE61104060CFCCF11D2;
+		};
 		D05FD9208045413A765F08BE = {
 			isa = PBXBuildFile;
 			fileRef = 5029E09D5EE606BF09C5C8AE;
@@ -212,6 +220,13 @@
 			path = RecentFilesMenuTemplate.nib;
 			sourceTree = "SOURCE_ROOT";
 		};
+		392B3C123885E3A0C10C42B7 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			name = parse.hpp;
+			path = ../../Source/parse.hpp;
+			sourceTree = "SOURCE_ROOT";
+		};
 		3EE4804E076DEA2F68B38931 = {
 			isa = PBXFileReference;
 			explicitFileType = wrapper.application;
@@ -281,6 +296,13 @@
 			name = "juce_audio_utils";
 			path = "~/JUCE/modules/juce_audio_utils";
 			sourceTree = "<absolute>";
+		};
+		65C9E4CF2D0ED94ECE494176 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			name = tinyxml2.h;
+			path = ../../Source/tinyxml2.h;
+			sourceTree = "SOURCE_ROOT";
 		};
 		67EB6EA4380FA89F6CA08583 = {
 			isa = PBXFileReference;
@@ -371,6 +393,13 @@
 			lastKnownFileType = text.plist.xml;
 			name = "Info-App.plist";
 			path = "Info-App.plist";
+			sourceTree = "SOURCE_ROOT";
+		};
+		97DCEFE61104060CFCCF11D2 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			name = tinyxml2.cpp;
+			path = ../../Source/tinyxml2.cpp;
 			sourceTree = "SOURCE_ROOT";
 		};
 		A4E295DFE71103BC4796D8D0 = {
@@ -527,6 +556,13 @@
 			path = System/Library/Frameworks/CoreAudio.framework;
 			sourceTree = SDKROOT;
 		};
+		F082795B43040DA9273B486A = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			name = parse.cpp;
+			path = ../../Source/parse.cpp;
+			sourceTree = "SOURCE_ROOT";
+		};
 		F9EF36CD262D526291103057 = {
 			isa = PBXFileReference;
 			lastKnownFileType = sourcecode.c.h;
@@ -558,6 +594,10 @@
 		D0A76C2AE61401411709CD8D = {
 			isa = PBXGroup;
 			children = (
+				F082795B43040DA9273B486A,
+				392B3C123885E3A0C10C42B7,
+				97DCEFE61104060CFCCF11D2,
+				65C9E4CF2D0ED94ECE494176,
 				5029E09D5EE606BF09C5C8AE,
 				7520AC5D59852E1F53831112,
 				DEC035AA649DB260E5B78348,
@@ -886,6 +926,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FAF4B6BC982C1EFBF7B9E485,
+				4BF3100094C2262667FE9C45,
 				D05FD9208045413A765F08BE,
 				C0BA4EB715E298938C284D8C,
 				36DEA9086934699B5D9F2AB8,
