@@ -42,8 +42,28 @@ public:
         neighbourhood_data_struct neighbourhood_data;
     } boid_struct;
     
+    typedef struct boid_range
+    {
+        uint32_t x_max_coordinate;
+        uint32_t y_max_coordinate;
+        uint32_t z_max_coordinate;
+        float x_max_velocity;
+        float y_max_velocity;
+        float z_max_velocity;
+        uint32_t x_min_coordinate;
+        uint32_t y_min_coordinate;
+        uint32_t z_min_coordinate;
+        float x_min_velocity;
+        float y_min_velocity;
+        float z_min_velocity;
+    } boid_range_t;
+    
     Boids();
     ~Boids();
+    
+    boid_range_t getBoidRange();
+    
+    boid_range_t localBoidRange;
     
     // Not included in my class but adding here for ease ?
     // Maximum coordinates
@@ -60,6 +80,6 @@ public:
 };
 
 // Parses the xml file, pass the file path as the argument
-std::vector<Boids::boid_struct> parseXML(const char * file_path);
+std::vector<Boids::boid_struct> parseXMLBOID(const char * file_path, Boids::boid_range_t* boidRange);
 
 #endif /* parse_hpp */

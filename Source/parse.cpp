@@ -8,7 +8,7 @@
 
 #include "parse.hpp"
 #include "stdint.h"
-#define debug_comments 1
+#define debug_comments 0
 using namespace tinyxml2;
 
 
@@ -28,7 +28,7 @@ Boids::~Boids(){
  * Implemented using the following tutorial
  * https://shilohjames.wordpress.com/2014/04/27/tinyxml2-tutorial/#XML-CreateXMLDocument
  */
-std::vector<Boids::boid_struct> parseXML(const char * file_path)
+std::vector<Boids::boid_struct> parseXMLBOID(const char * file_path, Boids::boid_range_t* boidRange)
 {
     // Declares an instance of the boid class
     Boids boid;
@@ -67,22 +67,34 @@ std::vector<Boids::boid_struct> parseXML(const char * file_path)
     // Maximum Velocities
     max_velocities_data->QueryAttribute("x_max_velocity", &xm_velocity_attribute);
     boid.x_max_velocity = (float)xm_velocity_attribute;
+    boidRange->x_max_velocity = boid.x_max_velocity;
+    boidRange->x_min_velocity = -boid.x_max_velocity;
     
     max_velocities_data->QueryAttribute("y_max_velocity", &ym_velocity_attribute);
     boid.y_max_velocity = (float)ym_velocity_attribute;
+    boidRange->y_max_velocity = boid.y_max_velocity;
+    boidRange->y_min_velocity = -boid.y_max_velocity;
     
     max_velocities_data->QueryAttribute("z_max_velocity", &zm_velocity_attribute);
     boid.z_max_velocity = (float)zm_velocity_attribute;
+    boidRange->z_max_velocity = boid.z_max_velocity;
+    boidRange->z_min_velocity = -boid.z_max_velocity;
     
     // Maximum Coordinates
     max_coordinates_data->QueryAttribute("x_max_coordinate", &xm_coordinate_attribute);
     boid.x_max_coordinate = (uint32_t)xm_coordinate_attribute;
+    boidRange->x_max_coordinate = boid.x_max_coordinate;
+    boidRange->x_min_coordinate = 0;
     
     max_coordinates_data->QueryAttribute("y_max_coordinate", &ym_coordinate_attribute);
     boid.y_max_coordinate = (uint32_t)ym_coordinate_attribute;
+    boidRange->y_max_coordinate = boid.y_max_coordinate;
+    boidRange->y_min_coordinate = 0;
     
     max_coordinates_data->QueryAttribute("z_max_coordinate", &zm_coordinate_attribute);
     boid.z_max_coordinate = (uint32_t)zm_coordinate_attribute;
+    boidRange->z_max_coordinate = boid.z_max_coordinate;
+    boidRange->z_min_coordinate = 0;
     
 #if debug_comments
     printf("vel: \txmv: %f\t ymv: %f\t zmv:%f\n", boid.x_max_velocity, boid.y_max_velocity, boid.z_max_velocity);
@@ -232,3 +244,22 @@ std::vector<Boids::boid_struct> parseXML(const char * file_path)
     printf("Finished parsing\n");
     return flock_data;
 };
+
+Boids::boid_range_t Boids::getBoidRange()
+{
+    localBoidRange.x_max_coordinate = x_max_coordinate;
+    localBoidRange.y_max_coordinate = y_max_coordinate;
+    localBoidRange.z_max_coordinate = z_max_coordinate;
+    localBoidRange.x_max_velocity = x_max_velocity;
+    localBoidRange.y_max_velocity = y_max_velocity;
+    localBoidRange.z_max_velocity = z_max_velocity;
+    
+    localBoidRange.x_min_coordinate = 0;
+    localBoidRange.y_min_coordinate = 0;
+    localBoidRange.z_min_coordinate = 0;
+    localBoidRange.x_min_velocity = -x_max_velocity;
+    localBoidRange.y_min_velocity = -y_max_velocity;
+    localBoidRange.z_min_velocity = -z_max_velocity;
+    
+    return localBoidRange;
+}

@@ -153,6 +153,7 @@ void AudioComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFi
     {
         for (auto i = 0; i < grainStack.size(); ++i)
         {
+            // Only start playing a grain if it's onset time has been 
             if (grainStack[i].onset < time)
             {
                 if (time <= (grainStack[i].onset + grainStack[i].length))

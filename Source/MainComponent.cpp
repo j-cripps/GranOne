@@ -33,6 +33,14 @@ MainComponent::MainComponent()
     
     // Start the thread to manage opening files safely
     startThread();
+    
+    // Add all the XML files to the boidStack
+    for (auto i = 0; i < 72; ++i)
+    {
+        const std::string tempString = ("/Users/jackcripps/Documents/MME_Proj/Flocking data 9030 250219/" + std::to_string(i) + "_flocking_data.xml");
+        std::vector<Boids::boid_struct> boidStruct = parseXMLBOID(tempString.data(), &boidRanges);
+        boidStructStack.push_back(boidStruct);
+    }
 }
 
 MainComponent::~MainComponent()

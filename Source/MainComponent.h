@@ -12,6 +12,7 @@
 #include "Grain.h"
 #include "ReferenceCountedBuffer.h"
 #include "AudioComponent.h"
+#include "parse.hpp"
 
 //==============================================================================
 /*
@@ -54,10 +55,16 @@ private:
     TextButton clearButton;
     Slider densitySlider, offsetSlider, lengthSlider, startSlider, panSlider, rateSlider;
     
+    // Audio Sample Buffer
     String chosenPath;
     AudioFormatManager formatManager;
     
+    // Audio Component
     AudioComponent* audioComponent;
-
+    
+    // Boid values
+    std::vector<std::vector<Boids::boid_struct>> boidStructStack;
+    Boids::boid_range_t boidRanges;
+ 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };
