@@ -13,6 +13,14 @@
 AudioComponent::AudioComponent()
     : Thread("Scheduler Thread")
 {
+    // Add all the XML files to the boidStack
+    for (auto i = 0; i < 2400; ++i)
+    {
+        const std::string tempString = ("/Users/jackcripps/Documents/MME_Proj/Flocking data 1335 010319/" + std::to_string(i) + "_flocking_data.xml");
+        std::vector<Boids::boid_struct> boidStruct = parseXMLBOID(tempString.data(), &boidRanges);
+        boidStructStack.push_back(boidStruct);
+    }
+    
     // specify the number of input and output channels that we want to open
     setAudioChannels (0, 2);
     
@@ -21,10 +29,21 @@ AudioComponent::AudioComponent()
     
     // Initialise time to 0 and create a grain in the stack
     time = 0;
-    //grainStack.add(Grain(88200, 44100, 0));
+    boidFrame = 0;
     
     // Start the thread to manage scheduler
     startThread(8);
+    
+    // Create the grainStack from the first frame of the boids, before any audio starts playing.
+    // Essentially starts the process from the beginning again if it's in offline mode (XML)
+    if (!grainStack.empty()) grainStack.clear();
+    
+    for (auto i = 0; i < boidStructStack[boidFrame].size(); ++i)
+    {
+        grainStack.push_back(createGrainFromBoid(&boidStructStack[0][i], &boidRanges));
+    }
+    // Start the boid frame count again
+    boidFrame = 1;
 }
 
 AudioComponent::~AudioComponent()
@@ -94,19 +113,38 @@ void AudioComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFi
     }
 #else
     
-    // Only run the scheduler every 10 samples
-    if (/*time % 1 == 0*/1)
+    // This needs to be run to as close as every 50ms as possible
+    uint32_t currentTime = timeCheck.getMillisecondCounter();
+    if ((currentTime - millisecondCount) >= 50)
     {
-        Random random;
-        int offsetNum = random.nextInt(Range<int>(0, 1000));
-        int lengthNum = random.nextInt(Range<int>(2205, 44100));
-        int startNum = random.nextInt(Range<int>(0, nInputSamples-1));
-        float panNum = (random.nextFloat() * 2.0) - 1.0;
-        float rateNum = 0.5;
-        if (time % 5 == 0) rateNum = 1.0;
-        if (time % 7 == 0) rateNum = 2.0;
-        if (time % 9 == 0) rateNum = 1.5;
+        // 'Reset' the counter
+        millisecondCount = currentTime;
         
+        // Check if boid frame is less than boidStructStack size, if not then stop generating new grains
+        if (boidFrame < boidStructStack.size())
+        {
+            // Process the next frame of boids
+            for (auto i = 0; i < grainStack.size(); ++i)
+            {
+                auto grainEnd = grainStack[i].onset + grainStack[i].length;
+                auto hasEnded = grainEnd < time;
+                if (hasEnded)
+                {
+                    generateGrainFromBoid(&grainStack[i], &boidStructStack[boidFrame][i], &boidRanges);
+                }
+                else
+                {
+                    updateGrainFromBoid(&grainStack[i], &boidStructStack[boidFrame][i], &boidRanges);
+                }
+            }
+            ++boidFrame;
+        }
+        
+        // Iterate over all the boids
+        // If the boid is not active then set the grain to not active
+        // Once the scheduler has finished do boidFrame++
+        
+        /*
         // Delete grains
         if (grainStack.size() > 0)
         {
@@ -137,11 +175,12 @@ void AudioComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFi
                 int startPosition = startNum;
                 for (int i = 0; i < 1; ++i)
                 {
-                    grainStack.add(Grain((int)time + onset, length, wrap(startPosition, 0, nSamples), kTukey, 0.1, panNum, rateNum));
+                    //grainStack.add(Grain((int)time + onset, length, wrap(startPosition, 0, nSamples), kTukey, 0.1, panNum, rateNum));
                 }
                 std::cout << grainStack.size() << std::endl;
             }
-        }
+         }
+         */
     }
     
     const auto nInputChannels = buffer->getNumChannels();
@@ -149,6 +188,7 @@ void AudioComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFi
     const auto nOutputSamplesRemaining = bufferToFill.numSamples;
     //std::cout << grainStack.size() << std::endl;
     
+    // Fill the output buffer
     for (auto sample = 0; sample < nOutputSamplesRemaining; ++sample)
     {
         for (auto i = 0; i < grainStack.size(); ++i)
@@ -158,7 +198,7 @@ void AudioComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFi
             {
                 if (time <= (grainStack[i].onset + grainStack[i].length))
                 {
-                    //std::cout << i << ": " << "time: " << time << "onset + length: " << (localGrainStack[i].onset + localGrainStack[i].length) << std::endl;
+                    //std::cout << i << ": " << "time: " << time << "onset + length: " << (grainStack[i].onset + grainStack[i].length) << std::endl;
                     grainStack[i].processAudio(bufferToFill,
                                                     *buffer,
                                                     nInputChannels,
@@ -228,7 +268,7 @@ void AudioComponent::run()
             int startPosition = -1000;
             for (int i = 0; i < 1; ++i)
             {
-                grainStack.add(Grain((int)time + onset, length, wrap(startPosition, 0, nSamples), kTukey, 1.0));
+                grainStack.push_back(Grain(time + onset, length, wrap(startPosition, 0, nSamples), kTukey, 1.0));
             }
             // Once all new grains have been created then replace grainStack with localGrainStack
             // grainStack = localGrainStack;
@@ -281,4 +321,119 @@ int AudioComponent::wrap(int val, const int low, const int high)
     }
     
     return low + (val - low) % rangeSize;
+}
+
+int AudioComponent::intMap(int x, int inMin, int inMax, int outMin, int outMax)
+{
+    return inMin + ((outMax - outMin) / (inMax - inMin)) * (x - inMin);
+}
+
+float AudioComponent::floatMap(float x, float inMin, float inMax, float outMin, float outMax)
+{
+    return inMin + ((outMax - outMin) / (inMax - inMin)) * (x - inMin);
+}
+
+int AudioComponent::intMapInverse(int x, int inMin, int inMax, int outMin, int outMax)
+{
+    return outMax - ((outMax - outMin) / (inMax - inMin)) * (x - inMin);
+}
+
+float AudioComponent::floatMapInverse(float x, float inMin, float inMax, float outMin, float outMax)
+{
+    return outMax - ((outMax - outMin) / (inMax - inMin)) * (x - inMin);
+}
+
+//==============================================================================
+void AudioComponent::setupGrainStack()
+{
+    for (auto i = 0; i < boidStructStack.size(); ++i)
+    {
+        
+    }
+}
+
+//==============================================================================
+Grain AudioComponent::createGrainFromBoid(Boids::boid_struct* boid, Boids::boid_range_t* range)
+{
+    // Keep fixed at 500ms
+    // Value in terms of samples @ 44.1kHz
+    int localLength = 22050;
+    
+    // Map to y coordinate of boids
+    // Value mapped from boid range to 0 to 1000 samples
+    int localOnset = intMap(boid->y_coordinate, range->y_min_coordinate, range->y_max_coordinate, 0, 2000);
+    
+    // Keep fixed at start of the sample buffer
+    int localStartPosition = 0;
+    
+    // Set envtype to Tukey
+    envType localEnv = kTukey;
+    
+    // Map to Z coordinate
+    // Value mapped in inverse, so the smaller the z coordinate, the larger the output amplitude
+    float localAmplitude = floatMapInverse((float)boid->z_coordinate, (float)range->z_min_coordinate, (float)range->z_max_coordinate, 0.2, 1.0);
+    
+    // Map to X coordinate
+    float localPanPosition = floatMap((float)boid->x_coordinate, (float)range->x_min_coordinate, (float)range->x_max_coordinate, 0.0, 2.0) - 1.0;
+    
+    // Keep fixed to 1.0
+    float localPlaybackRate = 1.0;
+    
+    return Grain(boid->ID, boid->active, time + localOnset, localLength, localStartPosition, localEnv, localAmplitude, localPanPosition, localPlaybackRate);
+}
+
+void AudioComponent::generateGrainFromBoid(Grain* grain, Boids::boid_struct* boid, Boids::boid_range_t* range)
+{
+    // Keep fixed at 500ms
+    // Value in terms of samples @ 44.1kHz
+    int localLength = 22050;
+    grain->length = localLength;
+    
+    // Map to y coordinate of boids
+    // Value mapped from boid range to 0 to 1000 samples
+    int localOnset = intMap(boid->y_coordinate, range->y_min_coordinate, range->y_max_coordinate, 0, 2000);
+    grain->onset = time + localOnset;
+    
+    // Keep fixed at start of the sample buffer
+    int localStartPosition = 0;
+    grain->startPosition = localStartPosition;
+    
+    // Set envtype to Tukey
+    envType localEnv = kTukey;
+    grain->envelope = localEnv;
+    
+    // Map to Z coordinate
+    // Value mapped in inverse, so the smaller the z coordinate, the larger the output amplitude
+    float localAmplitude = floatMapInverse((float)boid->z_coordinate, (float)range->z_min_coordinate, (float)range->z_max_coordinate, 0.2, 1.0);
+    grain->amplitude = localAmplitude;
+    
+    // Map to X coordinate
+    float localPanPosition = floatMap((float)boid->x_coordinate, (float)range->x_min_coordinate, (float)range->x_max_coordinate, 0.0, 2.0) - 1.0;
+    grain->panPosition = localPanPosition;
+    
+    // Keep fixed to 1.0
+    float localPlaybackRate = 1.0;
+    grain->playbackRate = localPlaybackRate;
+    
+    grain->isActive = boid->active;
+}
+
+void AudioComponent::updateGrainFromBoid(Grain* grain, Boids::boid_struct* boid, Boids::boid_range_t* range)
+{
+    // Only updates spatial position parameters
+    
+    // Map to Z coordinate
+    // Value mapped in inverse, so the smaller the z coordinate, the larger the output amplitude
+    float localAmplitude = floatMapInverse(boid->z_coordinate, (float)range->z_min_coordinate, (float)range->z_max_coordinate, 0.2, 1.0);
+    grain->amplitude = localAmplitude;
+    
+    // Map to X coordinate
+    float localPanPosition = floatMap(boid->x_coordinate, (float)range->x_min_coordinate, (float)range->x_max_coordinate, 0.0, 2.0) - 1.0;
+    grain->panPosition = localPanPosition;
+    
+    // Keep fixed to 1.0
+    float localPlaybackRate = 1.0;
+    grain->playbackRate = localPlaybackRate;
+    
+    grain->isActive = boid->active;
 }

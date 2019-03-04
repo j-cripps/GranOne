@@ -12,9 +12,12 @@
 
 //==============================================================================
 
-Grain::Grain(int onset, const int length, int startPosition, envType env, float amplitude, float panPosition, float playbackRate)
-    : onset(onset), length(length), startPosition(startPosition), envelope(env),
-      amplitude(amplitude), panPosition(panPosition), playbackRate(playbackRate), envBuffer(new Array<float, CriticalSection>)
+Grain::Grain(int boidID, bool isActive, unsigned long long int onset, const int length, int startPosition, envType env, float amplitude, float panPosition, float playbackRate)
+    : boidID(boidID), onset(onset), length(length), startPosition(startPosition), envelope(env),
+      amplitude(amplitude), panPosition(panPosition), playbackRate(playbackRate)
+#if SCHED_ENV
+, envBuffer(new Array<float, CriticalSection>)
+#endif
 {
     // Set amplitude values to be between 0.0 and 1.0 inclusive if constructed
     // values lie outside of this range
@@ -25,11 +28,15 @@ Grain::Grain(int onset, const int length, int startPosition, envType env, float 
     if (panPosition > 1.0) panPosition = 1.0;
     if (panPosition < -1.0) panPosition = -1.0;
     
-    // No support for negative or 0 playback rates
+    // No support for negative or 0 playback rates, so bind to sufficiently smal value
     if (playbackRate < 0.001) playbackRate = 0.001;
     
-    // If length is less than 10 samples then always use a rectangular envelope
+    // If length is less than 10 samples then always use a rectangular envelope, as the functions differ very little
+    // at this small number of samples
     if (length < 10) envelope = kRectangle;
+    
+    // Always starts off not playing
+    isPlaying = false;
     
 #if SCHED_ENV
     this->constructEnvelope(envBuffer);
@@ -38,7 +45,10 @@ Grain::Grain(int onset, const int length, int startPosition, envType env, float 
 };
 
 Grain::Grain()
-    : envBuffer(new Array<float, CriticalSection>)
+#if SCHED_ENV
+    :
+envBuffer(new Array<float, CriticalSection>)
+#endif
 {
     onset = 0;
     length = 0;
@@ -46,6 +56,8 @@ Grain::Grain()
     amplitude = 0.0;
     panPosition = 0.0;
     playbackRate = 1.0;
+    isPlaying = false;
+    envelope = kRectangle;
 };
 
 Grain::~Grain()
@@ -60,7 +72,7 @@ void Grain::processAudio(const AudioSourceChannelInfo& bufferToFill,
                          int nOutputChannels,
                          int nBufToFillSamples,
                          int nBufSamples,
-                         long long int time)
+                         unsigned long long int time)
 {
     for (auto channel = 0; channel < nOutputChannels; ++channel)
     {
@@ -69,6 +81,8 @@ void Grain::processAudio(const AudioSourceChannelInfo& bufferToFill,
         
         float position = (time - onset) * playbackRate;
         int ceilSample = (int)std::ceil(position);
+        
+        //std::cout << "ID: " << this->boidID << "\t" << "Pos: " << position << "\t" << "Amp: " << this->amplitude << "\t" << "pan: " << this->panPosition << std::endl;
         
         float eta = ceilSample - position;
         
@@ -84,7 +98,7 @@ void Grain::processAudio(const AudioSourceChannelInfo& bufferToFill,
         {
 #if SCHED_ENV
             channelData[time % nBufToFillSamples] += outputSample *
-                                                      this->envBuffer->getUnchecked((length - 1) - ((onset + length) - (int)time))) *
+                                                      this->envBuffer->getUnchecked((length - 1) - ((onset + length) - time))) *
             ((MathConstants<float>::sqrt2 / 2) *(cos(panPosition * (MathConstants<float>::pi / 4)) - sin(panPosition * (MathConstants<float>::pi / 4))));
 #else
             
@@ -98,7 +112,7 @@ void Grain::processAudio(const AudioSourceChannelInfo& bufferToFill,
         {
 #if SCHED_ENV
             channelData[time % nBufToFillSamples] += outputSample *
-                                                      this->envBuffer->getUnchecked((length - 1) - ((onset + length) - (int)time))) *
+                                                      this->envBuffer->getUnchecked((length - 1) - ((onset + length) - time))) *
             ((MathConstants<float>::sqrt2 / 2) *(cos(panPosition * (MathConstants<float>::pi / 4)) + sin(panPosition * (MathConstants<float>::pi / 4))));
 #else
             
@@ -153,7 +167,7 @@ void Grain::constructEnvelope(std::shared_ptr<Array<float, CriticalSection>> env
     }
 }
 
-float Grain::calculateEnvAtCurrentSample(long long int time)
+float Grain::calculateEnvAtCurrentSample(unsigned long long int time)
 {
     switch (envelope)
     {
@@ -164,7 +178,11 @@ float Grain::calculateEnvAtCurrentSample(long long int time)
         }
         case kTukey:
         {
-            float f = 1 / (2 * 0.5) * (1 - cos(2 * MathConstants<float>::pi *  ((length - 1) - ((onset + length) - (int)time)) / length));
+            // Basis of Tukey Window algorithm from:
+            // http://michaelkrzyzaniak.com/AudioSynthesis/2_Audio_Synthesis/11_Granular_Synthesis/1_Window_Functions/
+            // Slightly modified to fit implementation
+            // [Accessed: 16 February 2019]
+            float f = 1 / (2 * 0.5) * (1 - cos(2 * MathConstants<float>::pi *  ((length - 1) - ((onset + length) - time)) / length));
             return amplitude * (f < 1 ? f : 1);
             break;
         }
@@ -180,6 +198,7 @@ float Grain::calculateEnvAtCurrentSample(long long int time)
 
 void Grain::printEnvelope()
 {
+#if SCHED_ENV
     String string;
     for (auto i = 0; i < this->envBuffer->size(); ++i)
     {
@@ -188,8 +207,10 @@ void Grain::printEnvelope()
         string += ", ";
     }
     std::cout << string << "\n\n" << std::endl;
+#endif
 }
 
+//==============================================================================
 float Grain::linearInterpolant(float eta, float currentSample, float previousSample)
 {
     // One-multiply linear interpolation from: https://www.dsprelated.com/freebooks/pasp/Linear_Interpolation.html
