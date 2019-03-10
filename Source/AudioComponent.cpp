@@ -38,7 +38,7 @@ AudioComponent::AudioComponent()
     // Essentially starts the process from the beginning again if it's in offline mode (XML)
     if (!grainStack.empty()) grainStack.clear();
     
-    for (auto i = 0; i < boidStructStack[boidFrame].size(); ++i)
+    for (auto i = 0; i < /*boidStructStack[boidFrame].size()*/2; ++i)
     {
         grainStack.push_back(createGrainFromBoid(&boidStructStack[0][i], &boidRanges));
     }
@@ -371,13 +371,25 @@ Grain AudioComponent::createGrainFromBoid(Boids::boid_struct* boid, Boids::boid_
     
     // Map to Z coordinate
     // Value mapped in inverse, so the smaller the z coordinate, the larger the output amplitude
-    float localAmplitude = floatMapInverse((float)boid->z_coordinate, (float)range->z_min_coordinate, (float)range->z_max_coordinate, 0.2, 1.0);
+    float localAmplitude = floatMapInverse((float)boid->z_coordinate, (float)range->z_min_coordinate, (float)range->z_max_coordinate, 0.1, 1.0);
     
     // Map to X coordinate
     float localPanPosition = floatMap((float)boid->x_coordinate, (float)range->x_min_coordinate, (float)range->x_max_coordinate, 0.0, 2.0) - 1.0;
     
-    // Keep fixed to 1.0
-    float localPlaybackRate = 1.0;
+    // Change based on velocity
+    float localPlaybackRate;
+    if (abs(boid->x_velocity) >= 4 || abs(boid->y_velocity) >= 4 || abs(boid->z_velocity) >= 4)
+    {
+        localPlaybackRate = 2.0;
+    }
+    else if (abs(boid->x_velocity) >= 2 || abs(boid->y_velocity) >= 2 || abs(boid->z_velocity) >= 2)
+    {
+        localPlaybackRate = 1.0;
+    }
+    else
+    {
+        localPlaybackRate = 0.5;
+    }
     
     return Grain(boid->ID, boid->active, time + localOnset, localLength, localStartPosition, localEnv, localAmplitude, localPanPosition, localPlaybackRate);
 }
@@ -386,7 +398,7 @@ void AudioComponent::generateGrainFromBoid(Grain* grain, Boids::boid_struct* boi
 {
     // Keep fixed at 500ms
     // Value in terms of samples @ 44.1kHz
-    int localLength = 22050;
+    int localLength = 44100;
     grain->length = localLength;
     
     // Map to y coordinate of boids
@@ -404,15 +416,27 @@ void AudioComponent::generateGrainFromBoid(Grain* grain, Boids::boid_struct* boi
     
     // Map to Z coordinate
     // Value mapped in inverse, so the smaller the z coordinate, the larger the output amplitude
-    float localAmplitude = floatMapInverse((float)boid->z_coordinate, (float)range->z_min_coordinate, (float)range->z_max_coordinate, 0.2, 1.0);
+    float localAmplitude = floatMapInverse((float)boid->z_coordinate, (float)range->z_min_coordinate, (float)range->z_max_coordinate, 0.1, 1.0);
     grain->amplitude = localAmplitude;
     
     // Map to X coordinate
     float localPanPosition = floatMap((float)boid->x_coordinate, (float)range->x_min_coordinate, (float)range->x_max_coordinate, 0.0, 2.0) - 1.0;
     grain->panPosition = localPanPosition;
     
-    // Keep fixed to 1.0
-    float localPlaybackRate = 1.0;
+    // Change based on velocity
+    float localPlaybackRate;
+    if (abs(boid->x_velocity) >= 4 || abs(boid->y_velocity) >= 4 || abs(boid->z_velocity) >= 4)
+    {
+        localPlaybackRate = 2.0;
+    }
+    else if (abs(boid->x_velocity) >= 2 || abs(boid->y_velocity) >= 2 || abs(boid->z_velocity) >= 2)
+    {
+        localPlaybackRate = 1.0;
+    }
+    else
+    {
+        localPlaybackRate = 0.5;
+    }
     grain->playbackRate = localPlaybackRate;
     
     grain->isActive = boid->active;
@@ -424,15 +448,27 @@ void AudioComponent::updateGrainFromBoid(Grain* grain, Boids::boid_struct* boid,
     
     // Map to Z coordinate
     // Value mapped in inverse, so the smaller the z coordinate, the larger the output amplitude
-    float localAmplitude = floatMapInverse(boid->z_coordinate, (float)range->z_min_coordinate, (float)range->z_max_coordinate, 0.2, 1.0);
+    float localAmplitude = floatMapInverse(boid->z_coordinate, (float)range->z_min_coordinate, (float)range->z_max_coordinate, 0.1, 1.0);
     grain->amplitude = localAmplitude;
     
     // Map to X coordinate
     float localPanPosition = floatMap(boid->x_coordinate, (float)range->x_min_coordinate, (float)range->x_max_coordinate, 0.0, 2.0) - 1.0;
     grain->panPosition = localPanPosition;
     
-    // Keep fixed to 1.0
-    float localPlaybackRate = 1.0;
+    // Change based on velocity
+    float localPlaybackRate;
+    if (abs(boid->x_velocity) >= 4 || abs(boid->y_velocity) >= 4 || abs(boid->z_velocity) >= 4)
+    {
+        localPlaybackRate = 2.0;
+    }
+    else if (abs(boid->x_velocity) >= 3 || abs(boid->y_velocity) >= 3 || abs(boid->z_velocity) >= 3)
+    {
+        localPlaybackRate = 1.0;
+    }
+    else
+    {
+        localPlaybackRate = 0.5;
+    }
     grain->playbackRate = localPlaybackRate;
     
     grain->isActive = boid->active;

@@ -12,6 +12,7 @@
 #include "Grain.h"
 #include "ReferenceCountedBuffer.h"
 #include "AudioComponent.h"
+#include "GuiParameters.h"
 
 //==============================================================================
 /*
@@ -19,7 +20,9 @@
     your controls and content.
 */
 class MainComponent   : public Component,
-                        private Thread
+                        private Thread,
+                        private ChangeListener,
+                        private Slider::Listener
 {
 public:
     //==============================================================================
@@ -39,9 +42,7 @@ private:
     /**
      * @brief   Function called whenever the 'open' button is pressed in the GUI
      *
-     * @note    Implementation not thread safe so audio shuts down when pressed,
-     *          this can be avoided by following looping audio sample tutorial
-     *          on the JUCE website
+     * @note    Implementation is thread safe via the Juce Tutorial.
      */
     void openButtonClicked();
     
@@ -49,10 +50,13 @@ private:
     
     void checkForPathToOpen();
     
-    // GUI Elements
-    TextButton openButton;
-    TextButton clearButton;
-    Slider densitySlider, offsetSlider, lengthSlider, startSlider, panSlider, rateSlider;
+    void changeListenerCallback(ChangeBroadcaster* source) override;
+    
+    void thumbnailChanged();
+    
+    void sliderValueChanged(Slider* slider) override;
+    
+    guiMap_t guiMap;
     
     // Audio Sample Buffer
     String chosenPath;
@@ -60,6 +64,37 @@ private:
     
     // Audio Component
     AudioComponent* audioComponent;
+    
+    // GUI Elements
+    int numSections = 8;
+    
+    TextButton openButton;
+    TextButton clearButton;
+    
+    AudioThumbnailCache thumbnailCache;
+    AudioThumbnail thumbnail;
+    
+    Label masterGrainVolTitLab, masterGrainVolValLab;
+    Slider masterGrainVolSli;
+    
+    Label envSelectTitLab, settingTwoTitLab, settingThreeTitLab;
+    ComboBox envSelectBox, settingTwoBox, settingThreeBox;
+    
+    Label grainStartTitLab, grainStartMinLab, grainStartMaxLab;
+    ComboBox grainStartBox;
+    Slider grainStartSlider;
+    
+    Label grainOnsetTitLab, grainOnsetMinLab, grainOnsetMaxLab;
+    ComboBox grainOnsetBox;
+    Slider grainOnsetSlider;
+    
+    Label grainLengthTitLab, grainLengthMinLab, grainLengthMaxLab;
+    ComboBox grainLengthBox;
+    Slider grainLengthSlider;
+    
+    Label grainRateTitLab, grainRateMinLab, grainRateMaxLab;
+    ComboBox grainRateBox;
+    Slider grainRateSlider;
     
  
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)

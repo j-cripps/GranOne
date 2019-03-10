@@ -3,6 +3,7 @@
 <JUCERPROJECT id="hdXcoZ" name="GranOne" projectType="guiapp" jucerVersion="5.4.1">
   <MAINGROUP id="sPu5FQ" name="GranOne">
     <GROUP id="{3760451C-210B-053D-311E-A128BD71A4AF}" name="Source">
+      <FILE id="nQyKtn" name="GuiParameters.h" compile="0" resource="0" file="Source/GuiParameters.h"/>
       <FILE id="dB5wNF" name="parse.cpp" compile="1" resource="0" file="Source/parse.cpp"/>
       <FILE id="PAunBt" name="parse.hpp" compile="0" resource="0" file="Source/parse.hpp"/>
       <FILE id="lFiiBx" name="tinyxml2.cpp" compile="1" resource="0" file="Source/tinyxml2.cpp"/>

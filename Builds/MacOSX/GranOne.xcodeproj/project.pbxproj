@@ -332,6 +332,13 @@
 			path = "../../JuceLibraryCode/include_juce_audio_devices.mm";
 			sourceTree = "SOURCE_ROOT";
 		};
+		6FDDDD1E588B52E271808DE0 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			name = GuiParameters.h;
+			path = ../../Source/GuiParameters.h;
+			sourceTree = "SOURCE_ROOT";
+		};
 		7520AC5D59852E1F53831112 = {
 			isa = PBXFileReference;
 			lastKnownFileType = sourcecode.c.h;
@@ -594,6 +601,7 @@
 		D0A76C2AE61401411709CD8D = {
 			isa = PBXGroup;
 			children = (
+				6FDDDD1E588B52E271808DE0,
 				F082795B43040DA9273B486A,
 				392B3C123885E3A0C10C42B7,
 				97DCEFE61104060CFCCF11D2,
