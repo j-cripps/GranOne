@@ -53,3 +53,13 @@ typedef struct guiMap
     float grainRateMax;
     
 } guiMap_t;
+
+static Array<String> boidStrings = {
+    String("Fixed (Use Lowest Slider Value)"),
+    String("X Coordinate"),
+    String("Y Coordinate"),
+    String("Z Coordinate"),
+    String("X Velocity"),
+    String("Y Velocity"),
+    String("Z Velocity")
+};

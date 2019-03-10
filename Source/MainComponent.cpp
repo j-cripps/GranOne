@@ -61,6 +61,8 @@ MainComponent::MainComponent()
     
     addAndMakeVisible(grainStartBox);
     grainStartBox.addSectionHeading("Boid Parameter to Bind to Start Position");
+    grainStartBox.addItemList(StringArray(boidStrings), 1);
+    grainStartBox.setSelectedId(1);
     
     addAndMakeVisible(grainStartMinLab);
     grainStartMinLab.setText("Min Label", NotificationType::dontSendNotification);
@@ -89,6 +91,8 @@ MainComponent::MainComponent()
     
     addAndMakeVisible(grainOnsetBox);
     grainOnsetBox.addSectionHeading("Boid Parameter to Bind to Onset Time");
+    grainOnsetBox.addItemList(StringArray(boidStrings), 1);
+    grainOnsetBox.setSelectedId(1);
     
     addAndMakeVisible(grainOnsetMinLab);
     grainOnsetMinLab.setText("Min Label", NotificationType::dontSendNotification);
@@ -117,6 +121,8 @@ MainComponent::MainComponent()
     
     addAndMakeVisible(grainLengthBox);
     grainLengthBox.addSectionHeading("Boid Parameter to Bind to Length");
+    grainLengthBox.addItemList(StringArray(boidStrings), 1);
+    grainLengthBox.setSelectedId(1);
     
     addAndMakeVisible(grainLengthMinLab);
     grainLengthMinLab.setText("Min Label", NotificationType::dontSendNotification);
@@ -145,6 +151,8 @@ MainComponent::MainComponent()
     
     addAndMakeVisible(grainRateBox);
     grainRateBox.addSectionHeading("Boid Parameter to Bind to Transposition");
+    grainRateBox.addItemList(StringArray(boidStrings), 1);
+    grainRateBox.setSelectedId(1);
     
     addAndMakeVisible(grainRateMinLab);
     grainRateMinLab.setText("Min Label", NotificationType::dontSendNotification);
@@ -560,4 +568,9 @@ void MainComponent::sliderValueChanged(Slider* slider)
     {
         std::cout << "Slider not recognized" << std::endl;
     }
+}
+
+guiMap_t* MainComponent::getGuiMap()
+{
+    return &this->guiMap;
 }

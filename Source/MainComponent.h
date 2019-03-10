@@ -56,6 +56,8 @@ private:
     
     void sliderValueChanged(Slider* slider) override;
     
+    guiMap_t* getGuiMap();
+    
     guiMap_t guiMap;
     
     // Audio Sample Buffer
