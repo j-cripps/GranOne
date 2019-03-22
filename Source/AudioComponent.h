@@ -15,16 +15,22 @@
 #include "ReferenceCountedBuffer.h"
 #include "sys/kdebug_signpost.h"
 #include "parse.hpp"
+#include "GuiParameters.h"
 
 #define SCHED_THREAD 0
 #define GRAIN_LIMIT 100
+
+// 0 - Stereo Decode
+// 1 - Ambisonic Decode to Disk
+// 2 - Ambisonic Decode to Output
+#define DECODE_METHOD 0
 
 class AudioComponent    : public AudioAppComponent,
                           private Thread
 {
 public:
     //==============================================================================
-    AudioComponent();
+    AudioComponent(guiMap_t* guiMap);
     ~AudioComponent();
     
     //==============================================================================
@@ -40,6 +46,10 @@ public:
     void clearCurrentBuffer();
     void checkBuffers();
     
+    //==============================================================================
+    void setGuiMap(guiMap_t* guiMap);
+    void refreshGuiMap();
+    
 private:
     //==============================================================================
     int wrap(int val, const int low, const int high);
@@ -52,9 +62,9 @@ private:
     void setupGrainStack();
     
     //==============================================================================
-    Grain createGrainFromBoid(Boids::boid_struct* boid, Boids::boid_range_t* range);
-    void generateGrainFromBoid(Grain* grain, Boids::boid_struct* boid, Boids::boid_range_t* range);
-    void updateGrainFromBoid(Grain* grain, Boids::boid_struct* boid, Boids::boid_range_t* range);
+    Grain createGrainFromBoid(std::vector<Boids::boidParam_t>* boid, std::vector<Boids::boidParam_t>* range);
+    void generateGrainFromBoid(Grain* grain, std::vector<Boids::boidParam_t>* boid, std::vector<Boids::boidParam_t>* range);
+    void updateGrainFromBoid(Grain* grain, std::vector<Boids::boidParam_t>* boid, std::vector<Boids::boidParam_t>* range);
     
     //==============================================================================
     AudioFormatManager formatManager;
@@ -70,11 +80,14 @@ private:
     ReferenceCountedBuffer::Ptr currentBuffer;
     
     // Boid values
-    std::vector<std::vector<Boids::boid_struct>> boidStructStack;
-    Boids::boid_range_t boidRanges;
+    std::vector<std::vector<std::vector<Boids::boidParam_t>>> boidStructStack;
+    
+    std::vector<Boids::boidParam_t> boidRanges;
     unsigned int boidFrame;
     Time timeCheck;
     uint32_t millisecondCount;
+    guiMap_t localGuiMap;
+    guiMap_t* masterGuiMap;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioComponent);
 };

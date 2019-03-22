@@ -10,19 +10,28 @@
 
 #include "AudioComponent.h"
 
-AudioComponent::AudioComponent()
-    : Thread("Scheduler Thread")
+AudioComponent::AudioComponent(guiMap_t* guiMap)
+    : Thread("Scheduler Thread"), masterGuiMap(guiMap)
 {
+    // Resize the array to be the correct size
+    boidRanges.resize(numberOfMaxBindings);
+    
     // Add all the XML files to the boidStack
     for (auto i = 0; i < 2400; ++i)
     {
-        const std::string tempString = ("/Users/jackcripps/Documents/MME_Proj/Flocking data 1335 010319/" + std::to_string(i) + "_flocking_data.xml");
-        std::vector<Boids::boid_struct> boidStruct = parseXMLBOID(tempString.data(), &boidRanges);
+        const std::string tempString = ("/Users/jackcripps/Documents/MME_Proj/Flocking data 1847 100319/" + std::to_string(i) + "_flocking_data.xml");
+        std::vector<std::vector<Boids::boidParam_t>> boidStruct = parseXMLBOID(tempString.data(), &boidRanges);
         boidStructStack.push_back(boidStruct);
     }
     
     // specify the number of input and output channels that we want to open
-    setAudioChannels (0, 2);
+#if DECODE_METHOD == 1
+    setAudioChannels (0, 4);
+#elif DECODE_METHOD == 2
+    setAudioChannels(0, 4);
+#else
+    setAudioChannels(0, 2);
+#endif
     
     // Register audio formats
     formatManager.registerBasicFormats();
@@ -36,9 +45,11 @@ AudioComponent::AudioComponent()
     
     // Create the grainStack from the first frame of the boids, before any audio starts playing.
     // Essentially starts the process from the beginning again if it's in offline mode (XML)
+    refreshGuiMap();
+    
     if (!grainStack.empty()) grainStack.clear();
     
-    for (auto i = 0; i < /*boidStructStack[boidFrame].size()*/2; ++i)
+    for (auto i = 0; i < boidStructStack[boidFrame].size(); ++i)
     {
         grainStack.push_back(createGrainFromBoid(&boidStructStack[0][i], &boidRanges));
     }
@@ -123,6 +134,9 @@ void AudioComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFi
         // Check if boid frame is less than boidStructStack size, if not then stop generating new grains
         if (boidFrame < boidStructStack.size())
         {
+            // Refresh the GUI parameters
+            refreshGuiMap();
+            
             // Process the next frame of boids
             for (auto i = 0; i < grainStack.size(); ++i)
             {
@@ -311,6 +325,18 @@ void AudioComponent::checkBuffers()
 }
 
 //==============================================================================
+void AudioComponent::setGuiMap(guiMap_t *guiMap)
+{
+    masterGuiMap = guiMap;
+}
+
+void AudioComponent::refreshGuiMap()
+{
+    // Ensure that this is an entire copy and not just a reference
+    memcpy(&localGuiMap, masterGuiMap, sizeof(guiMap));
+}
+
+//==============================================================================
 int AudioComponent::wrap(int val, const int low, const int high)
 {
     auto rangeSize = high - low + 1;
@@ -325,12 +351,26 @@ int AudioComponent::wrap(int val, const int low, const int high)
 
 int AudioComponent::intMap(int x, int inMin, int inMax, int outMin, int outMax)
 {
-    return inMin + ((outMax - outMin) / (inMax - inMin)) * (x - inMin);
+    if (outMin == outMax)
+    {
+        return outMin;
+    }
+    else
+    {
+        return (float)((x - inMin)) / (float)((inMax - inMin)) * (outMax - outMin) + outMin;
+    }
 }
 
 float AudioComponent::floatMap(float x, float inMin, float inMax, float outMin, float outMax)
 {
-    return inMin + ((outMax - outMin) / (inMax - inMin)) * (x - inMin);
+    if (outMin == outMax)
+    {
+        return outMin;
+    }
+    else
+    {
+        return (x - inMin) / (inMax - inMin) * (outMax - outMin) + outMin;
+    }
 }
 
 int AudioComponent::intMapInverse(int x, int inMin, int inMax, int outMin, int outMax)
@@ -353,31 +393,112 @@ void AudioComponent::setupGrainStack()
 }
 
 //==============================================================================
-Grain AudioComponent::createGrainFromBoid(Boids::boid_struct* boid, Boids::boid_range_t* range)
+Grain AudioComponent::createGrainFromBoid(std::vector<Boids::boidParam_t>* boid, std::vector<Boids::boidParam_t>* range)
 {
-    // Keep fixed at 500ms
-    // Value in terms of samples @ 44.1kHz
-    int localLength = 22050;
+    // Get the parameter from the boid that has been selected in the GUI and map it to grain length
+    Boids::boidParam_t lengthParam = (*boid)[localGuiMap.lengthBinding];
+    int localLength;
+    if (lengthParam.numType == Boids::intType)
+    {
+        localLength = intMap(lengthParam.intNum,
+                             (*range)[(localGuiMap.lengthBinding * 2)].intNum,
+                             (*range)[(localGuiMap.lengthBinding * 2) + 1].intNum,
+                             (int)localGuiMap.grainLengthMin,
+                             (int)localGuiMap.grainLengthMax);
+    }
+    else
+    {
+        localLength = floatMap(lengthParam.floatNum,
+                               (*range)[(localGuiMap.lengthBinding * 2)].floatNum,
+                               (*range)[(localGuiMap.lengthBinding * 2) + 1].floatNum,
+                               (float)localGuiMap.grainLengthMin,
+                               (float)localGuiMap.grainLengthMax);
+    }
+
     
-    // Map to y coordinate of boids
-    // Value mapped from boid range to 0 to 1000 samples
-    int localOnset = intMap(boid->y_coordinate, range->y_min_coordinate, range->y_max_coordinate, 0, 2000);
+    // Get the parameter from the boid that has been selected in the GUI and map it to grain onset time
+    Boids::boidParam_t onsetParam = (*boid)[localGuiMap.onsetBinding];
+    int localOnset;
+    if (onsetParam.numType == Boids::intType)
+    {
+        localOnset = intMap(onsetParam.intNum,
+                            (*range)[(localGuiMap.onsetBinding * 2)].intNum,
+                            (*range)[(localGuiMap.onsetBinding * 2) + 1].intNum,
+                            (int)localGuiMap.grainOnsetMin,
+                            (int)localGuiMap.grainOnsetMax);
+    }
+    else
+    {
+        localOnset = floatMap(onsetParam.floatNum,
+                             (*range)[(localGuiMap.onsetBinding * 2)].floatNum,
+                             (*range)[(localGuiMap.onsetBinding * 2) + 1].floatNum,
+                             (float)localGuiMap.grainOnsetMin,
+                             (float)localGuiMap.grainOnsetMax);
+    }
     
-    // Keep fixed at start of the sample buffer
-    int localStartPosition = 0;
+    // Get the parameter from the boid that has been selected in the GUI and map it to grain start position
+    Boids::boidParam_t startParam = (*boid)[localGuiMap.startBinding];
+    int localStartPosition;
+    if (currentBuffer != nullptr)
+    {
+        if (startParam.numType == Boids::intType)
+        {
+            localStartPosition = intMap(startParam.intNum,
+                                        (*range)[(localGuiMap.startBinding * 2)].intNum,
+                                        (*range)[(localGuiMap.startBinding * 2) + 1].intNum,
+                                        (int)(localGuiMap.grainStartPosMin * currentBuffer->getAudioSampleBuffer()->getNumSamples()),
+                                        (int)(localGuiMap.grainStartPosMax * currentBuffer->getAudioSampleBuffer()->getNumSamples()));
+        }
+        else
+        {
+            localStartPosition = floatMap(startParam.floatNum,
+                                          (*range)[(localGuiMap.startBinding * 2)].floatNum,
+                                          (*range)[(localGuiMap.startBinding * 2) + 1].floatNum,
+                                          (float)localGuiMap.grainStartPosMin * currentBuffer->getAudioSampleBuffer()->getNumSamples(),
+                                          (float)localGuiMap.grainStartPosMax * currentBuffer->getAudioSampleBuffer()->getNumSamples());
+        }
+    }
+    else
+    {
+        // Must set local start position to 0 if there is no audio buffer yet
+        localStartPosition = 0;
+    }
     
-    // Set envtype to Tukey
-    envType localEnv = kTukey;
+    // Get grain envelope selection from GUI and set it to the current grain
+    envType localEnv = localGuiMap.envelope;
     
-    // Map to Z coordinate
-    // Value mapped in inverse, so the smaller the z coordinate, the larger the output amplitude
-    float localAmplitude = floatMapInverse((float)boid->z_coordinate, (float)range->z_min_coordinate, (float)range->z_max_coordinate, 0.1, 1.0);
+    // Amplitude set by the master vol control, more to prevent clipping at output than to actually increase volume
+    float localAmplitude = localGuiMap.grainMasterVol;
     
-    // Map to X coordinate
-    float localPanPosition = floatMap((float)boid->x_coordinate, (float)range->x_min_coordinate, (float)range->x_max_coordinate, 0.0, 2.0) - 1.0;
+    // TEMPORARY
+    // Map X coordinate of grain to pan position until ambisonics is implemented
+    Boids::boidParam_t panParam = (*boid)[xCoordinate];
+    float localPanPosition = floatMap(panParam.intNum,
+                                      0,
+                                      2000,
+                                      -1.0,
+                                      1.0);
     
-    // Change based on velocity
+    // GUI mapping for playback rate
+    Boids::boidParam_t rateParam = (*boid)[localGuiMap.rateBinding];
     float localPlaybackRate;
+    if (rateParam.numType == Boids::intType)
+    {
+        localPlaybackRate = floatMap((float)rateParam.intNum,
+                                     (float)(*range)[(localGuiMap.rateBinding * 2)].intNum,
+                                     (float)(*range)[(localGuiMap.rateBinding * 2) + 1].intNum,
+                                     localGuiMap.grainRateMin,
+                                     localGuiMap.grainRateMax);
+    }
+    else
+    {
+        localPlaybackRate = floatMap(rateParam.floatNum,
+                                     (*range)[(localGuiMap.rateBinding * 2)].floatNum,
+                                     (*range)[(localGuiMap.rateBinding * 2) + 1].floatNum,
+                                     localGuiMap.grainRateMin,
+                                     localGuiMap.grainRateMax);
+    }
+    /*
     if (abs(boid->x_velocity) >= 4 || abs(boid->y_velocity) >= 4 || abs(boid->z_velocity) >= 4)
     {
         localPlaybackRate = 2.0;
@@ -390,41 +511,113 @@ Grain AudioComponent::createGrainFromBoid(Boids::boid_struct* boid, Boids::boid_
     {
         localPlaybackRate = 0.5;
     }
+     */
     
-    return Grain(boid->ID, boid->active, time + localOnset, localLength, localStartPosition, localEnv, localAmplitude, localPanPosition, localPlaybackRate);
+    return Grain((*boid)[boidID].intNum, (*boid)[isBoidActive].intNum, time + localOnset, localLength, localStartPosition, localEnv, localAmplitude, localPanPosition, localGuiMap.grainRateMax);
 }
 
-void AudioComponent::generateGrainFromBoid(Grain* grain, Boids::boid_struct* boid, Boids::boid_range_t* range)
+void AudioComponent::generateGrainFromBoid(Grain* grain, std::vector<Boids::boidParam_t>* boid, std::vector<Boids::boidParam_t>* range)
 {
-    // Keep fixed at 500ms
-    // Value in terms of samples @ 44.1kHz
-    int localLength = 44100;
+    // Get the parameter from the boid that has been selected in the GUI and map it to grain length
+    Boids::boidParam_t lengthParam = (*boid)[localGuiMap.lengthBinding];
+    int localLength;
+    if (lengthParam.numType == Boids::intType)
+    {
+        localLength = intMap(lengthParam.intNum,
+                             (*range)[(localGuiMap.lengthBinding * 2)].intNum,
+                             (*range)[(localGuiMap.lengthBinding * 2) + 1].intNum,
+                             (int)localGuiMap.grainLengthMin,
+                             (int)localGuiMap.grainLengthMax);
+    }
+    else
+    {
+        localLength = floatMap(lengthParam.floatNum,
+                               (*range)[(localGuiMap.lengthBinding * 2)].floatNum,
+                               (*range)[(localGuiMap.lengthBinding * 2) + 1].floatNum,
+                               (float)localGuiMap.grainLengthMin,
+                               (float)localGuiMap.grainLengthMax);
+    }
     grain->length = localLength;
     
-    // Map to y coordinate of boids
-    // Value mapped from boid range to 0 to 1000 samples
-    int localOnset = intMap(boid->y_coordinate, range->y_min_coordinate, range->y_max_coordinate, 0, 2000);
+    // Get the parameter from the boid that has been selected in the GUI and map it to grain onset time
+    Boids::boidParam_t onsetParam = (*boid)[localGuiMap.onsetBinding];
+    int localOnset;
+    if (onsetParam.numType == Boids::intType)
+    {
+        localOnset = intMap(onsetParam.intNum,
+                            (*range)[(localGuiMap.onsetBinding * 2)].intNum,
+                            (*range)[(localGuiMap.onsetBinding * 2) + 1].intNum,
+                            (int)localGuiMap.grainOnsetMin,
+                            (int)localGuiMap.grainOnsetMax);
+    }
+    else
+    {
+        localOnset = floatMap(onsetParam.intNum,
+                              (*range)[(localGuiMap.onsetBinding * 2)].floatNum,
+                              (*range)[(localGuiMap.onsetBinding * 2) + 1].floatNum,
+                              (float)localGuiMap.grainOnsetMin,
+                              (float)localGuiMap.grainOnsetMax);
+    }
     grain->onset = time + localOnset;
     
-    // Keep fixed at start of the sample buffer
-    int localStartPosition = 0;
+    // Get the parameter from the boid that has been selected in the GUI and map it to grain start position
+    Boids::boidParam_t startParam = (*boid)[localGuiMap.startBinding];
+    int localStartPosition;
+    if (startParam.numType == Boids::intType)
+    {
+        localStartPosition = intMap(startParam.intNum,
+                                    (*range)[(localGuiMap.startBinding * 2)].intNum,
+                                    (*range)[(localGuiMap.startBinding * 2) + 1].intNum,
+                                    (int)(localGuiMap.grainStartPosMin * currentBuffer->getAudioSampleBuffer()->getNumSamples()),
+                                    (int)(localGuiMap.grainStartPosMax * currentBuffer->getAudioSampleBuffer()->getNumSamples()));
+    }
+    else
+    {
+        localStartPosition = floatMap(startParam.floatNum,
+                                      (*range)[(localGuiMap.startBinding * 2)].floatNum,
+                                      (*range)[(localGuiMap.startBinding * 2) + 1].floatNum,
+                                      (float)localGuiMap.grainStartPosMin * currentBuffer->getAudioSampleBuffer()->getNumSamples(),
+                                      (float)localGuiMap.grainStartPosMax * currentBuffer->getAudioSampleBuffer()->getNumSamples());
+    }
     grain->startPosition = localStartPosition;
     
-    // Set envtype to Tukey
-    envType localEnv = kTukey;
-    grain->envelope = localEnv;
+    // Get grain envelope selection from GUI and set it to the current grain
+    grain->envelope = localGuiMap.envelope;
     
-    // Map to Z coordinate
-    // Value mapped in inverse, so the smaller the z coordinate, the larger the output amplitude
-    float localAmplitude = floatMapInverse((float)boid->z_coordinate, (float)range->z_min_coordinate, (float)range->z_max_coordinate, 0.1, 1.0);
+    // Amplitude set by the master vol control, more to prevent clipping at output than to actually increase volume
+    float localAmplitude = localGuiMap.grainMasterVol;
     grain->amplitude = localAmplitude;
     
-    // Map to X coordinate
-    float localPanPosition = floatMap((float)boid->x_coordinate, (float)range->x_min_coordinate, (float)range->x_max_coordinate, 0.0, 2.0) - 1.0;
+    // TEMPORARY
+    // Map X coordinate of grain to pan position until ambisonics is implemented
+    Boids::boidParam_t panParam = (*boid)[xCoordinate];
+    float localPanPosition = floatMap(panParam.intNum,
+                                      0,
+                                      2000,
+                                      -1.0,
+                                      1.0);
     grain->panPosition = localPanPosition;
     
-    // Change based on velocity
+    // GUI mapping for playback rate
+    Boids::boidParam_t rateParam = (*boid)[localGuiMap.rateBinding];
     float localPlaybackRate;
+    if (rateParam.numType == Boids::intType)
+    {
+        localPlaybackRate = floatMap((float)rateParam.intNum,
+                                     (float)(*range)[(localGuiMap.rateBinding * 2)].intNum,
+                                     (float)(*range)[(localGuiMap.rateBinding * 2) + 1].intNum,
+                                     localGuiMap.grainRateMin,
+                                     localGuiMap.grainRateMax);
+    }
+    else
+    {
+        localPlaybackRate = floatMap(rateParam.floatNum,
+                                     (*range)[(localGuiMap.rateBinding * 2)].floatNum,
+                                     (*range)[(localGuiMap.rateBinding * 2) + 1].floatNum,
+                                     localGuiMap.grainRateMin,
+                                     localGuiMap.grainRateMax);
+    }
+    /*
     if (abs(boid->x_velocity) >= 4 || abs(boid->y_velocity) >= 4 || abs(boid->z_velocity) >= 4)
     {
         localPlaybackRate = 2.0;
@@ -437,39 +630,29 @@ void AudioComponent::generateGrainFromBoid(Grain* grain, Boids::boid_struct* boi
     {
         localPlaybackRate = 0.5;
     }
+     */
     grain->playbackRate = localPlaybackRate;
     
-    grain->isActive = boid->active;
+    grain->isActive = (*boid)[isBoidActive].intNum;
 }
 
-void AudioComponent::updateGrainFromBoid(Grain* grain, Boids::boid_struct* boid, Boids::boid_range_t* range)
+void AudioComponent::updateGrainFromBoid(Grain* grain, std::vector<Boids::boidParam_t>* boid, std::vector<Boids::boidParam_t>* range)
 {
     // Only updates spatial position parameters
     
-    // Map to Z coordinate
-    // Value mapped in inverse, so the smaller the z coordinate, the larger the output amplitude
-    float localAmplitude = floatMapInverse(boid->z_coordinate, (float)range->z_min_coordinate, (float)range->z_max_coordinate, 0.1, 1.0);
+    // Amplitude set by the master vol control, more to prevent clipping at output than to actually increase volume
+    float localAmplitude = localGuiMap.grainMasterVol;
     grain->amplitude = localAmplitude;
     
-    // Map to X coordinate
-    float localPanPosition = floatMap(boid->x_coordinate, (float)range->x_min_coordinate, (float)range->x_max_coordinate, 0.0, 2.0) - 1.0;
+    // TEMPORARY
+    // Map X coordinate of grain to pan position until ambisonics is implemented
+    Boids::boidParam_t panParam = (*boid)[xCoordinate];
+    float localPanPosition = floatMap(panParam.intNum,
+                                      0,
+                                      2000,
+                                      -1.0,
+                                      1.0);
     grain->panPosition = localPanPosition;
     
-    // Change based on velocity
-    float localPlaybackRate;
-    if (abs(boid->x_velocity) >= 4 || abs(boid->y_velocity) >= 4 || abs(boid->z_velocity) >= 4)
-    {
-        localPlaybackRate = 2.0;
-    }
-    else if (abs(boid->x_velocity) >= 3 || abs(boid->y_velocity) >= 3 || abs(boid->z_velocity) >= 3)
-    {
-        localPlaybackRate = 1.0;
-    }
-    else
-    {
-        localPlaybackRate = 0.5;
-    }
-    grain->playbackRate = localPlaybackRate;
-    
-    grain->isActive = boid->active;
+    grain->isActive = (*boid)[isBoidActive].intNum;
 }

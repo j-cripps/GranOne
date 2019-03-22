@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<JUCERPROJECT id="hdXcoZ" name="GranOne" projectType="guiapp" jucerVersion="5.4.1">
+<JUCERPROJECT id="hdXcoZ" name="GranOne" projectType="guiapp" jucerVersion="5.4.1"
+              headerPath="/Users/jackcripps/Documents/MME_Proj/cereal-1.2.2/include">
   <MAINGROUP id="sPu5FQ" name="GranOne">
     <GROUP id="{3760451C-210B-053D-311E-A128BD71A4AF}" name="Source">
+      <FILE id="cxtEu9" name="Encoder.cpp" compile="1" resource="0" file="Source/Encoder.cpp"/>
+      <FILE id="JXHYaC" name="Encoder.h" compile="0" resource="0" file="Source/Encoder.h"/>
       <FILE id="nQyKtn" name="GuiParameters.h" compile="0" resource="0" file="Source/GuiParameters.h"/>
       <FILE id="dB5wNF" name="parse.cpp" compile="1" resource="0" file="Source/parse.cpp"/>
       <FILE id="PAunBt" name="parse.hpp" compile="0" resource="0" file="Source/parse.hpp"/>

@@ -22,7 +22,8 @@
 class MainComponent   : public Component,
                         private Thread,
                         private ChangeListener,
-                        private Slider::Listener
+                        private Slider::Listener,
+                        private ComboBox::Listener
 {
 public:
     //==============================================================================
@@ -56,7 +57,7 @@ private:
     
     void sliderValueChanged(Slider* slider) override;
     
-    guiMap_t* getGuiMap();
+    void comboBoxChanged(ComboBox* comboBox) override;
     
     guiMap_t guiMap;
     

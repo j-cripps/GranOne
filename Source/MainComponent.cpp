@@ -53,6 +53,8 @@ MainComponent::MainComponent()
     envSelectBox.addItem("Rectangle", 1);
     envSelectBox.addItem("Tukey", 2);
     envSelectBox.setSelectedId(2);
+    guiMap.envelope = INIT_ENV_TYPE;
+    envSelectBox.addListener(this);
     
     // Setup grain start position
     addAndMakeVisible(grainStartTitLab);
@@ -62,7 +64,9 @@ MainComponent::MainComponent()
     addAndMakeVisible(grainStartBox);
     grainStartBox.addSectionHeading("Boid Parameter to Bind to Start Position");
     grainStartBox.addItemList(StringArray(boidStrings), 1);
-    grainStartBox.setSelectedId(1);
+    grainStartBox.setSelectedId(INIT_START_POS_BIND + 1);
+    guiMap.startBinding = INIT_START_POS_BIND;
+    grainStartBox.addListener(this);
     
     addAndMakeVisible(grainStartMinLab);
     grainStartMinLab.setText("Min Label", NotificationType::dontSendNotification);
@@ -92,7 +96,9 @@ MainComponent::MainComponent()
     addAndMakeVisible(grainOnsetBox);
     grainOnsetBox.addSectionHeading("Boid Parameter to Bind to Onset Time");
     grainOnsetBox.addItemList(StringArray(boidStrings), 1);
-    grainOnsetBox.setSelectedId(1);
+    grainOnsetBox.setSelectedId(INIT_ONSET_BIND + 1);
+    guiMap.onsetBinding = INIT_ONSET_BIND;
+    grainOnsetBox.addListener(this);
     
     addAndMakeVisible(grainOnsetMinLab);
     grainOnsetMinLab.setText("Min Label", NotificationType::dontSendNotification);
@@ -122,7 +128,9 @@ MainComponent::MainComponent()
     addAndMakeVisible(grainLengthBox);
     grainLengthBox.addSectionHeading("Boid Parameter to Bind to Length");
     grainLengthBox.addItemList(StringArray(boidStrings), 1);
-    grainLengthBox.setSelectedId(1);
+    grainLengthBox.setSelectedId(INIT_LENGTH_BIND + 1);
+    guiMap.lengthBinding = INIT_LENGTH_BIND;
+    grainLengthBox.addListener(this);
     
     addAndMakeVisible(grainLengthMinLab);
     grainLengthMinLab.setText("Min Label", NotificationType::dontSendNotification);
@@ -152,7 +160,9 @@ MainComponent::MainComponent()
     addAndMakeVisible(grainRateBox);
     grainRateBox.addSectionHeading("Boid Parameter to Bind to Transposition");
     grainRateBox.addItemList(StringArray(boidStrings), 1);
-    grainRateBox.setSelectedId(1);
+    grainRateBox.setSelectedId(INIT_RATE_BIND + 1);
+    guiMap.rateBinding = INIT_RATE_BIND;
+    grainRateBox.addListener(this);
     
     addAndMakeVisible(grainRateMinLab);
     grainRateMinLab.setText("Min Label", NotificationType::dontSendNotification);
@@ -174,7 +184,6 @@ MainComponent::MainComponent()
     grainRateMaxLab.setJustificationType(Justification::centred);
     grainRateMaxLab.setColour(Label::ColourIds::outlineColourId, Colour(144, 152, 154));
     
-    
     // Make sure you set the size of the component after
     // you add any child components.
     setSize (800, 800);
@@ -183,7 +192,10 @@ MainComponent::MainComponent()
     formatManager.registerBasicFormats();
     
     // Create a new audioComponent
-    audioComponent = new AudioComponent();
+    audioComponent = new AudioComponent(&guiMap);
+    
+    // Give the audio component a reference to the gui map
+    // audioComponent->setGuiMap(&guiMap);
     
     // Start the thread to manage opening files safely
     startThread();
@@ -424,6 +436,10 @@ void MainComponent::openButtonClicked()
         auto file = chooser.getResult();
         auto path = file.getFullPathName();
         chosenPath.swapWith(path);
+        
+        // Set the audio thumbnail to the new waveform
+        thumbnail.setSource(new FileInputSource(file));
+        
         // Wake up the background thread so that it can load the audio file
         notify();
     }
@@ -463,9 +479,6 @@ void MainComponent::checkForPathToOpen()
             
                 // Use method in AudioComponent to set a component in here
                 audioComponent->setAudioBuffers(newBuffer);
-                
-                // Set the audio thumbnail to the new waveform
-                thumbnail.setSource(new FileInputSource(file));
                 
                 //std::cout << "samples in buffer: " << currentBuffer->getNumSamples() << std::endl;
             }
@@ -511,12 +524,12 @@ void MainComponent::sliderValueChanged(Slider* slider)
     else if (slider == &grainStartSlider)
     {
         // Get the values from the slider
-        int sliderMin = (int)slider->getMinValueObject().getValue();
-        int sliderMax = (int)slider->getMaxValueObject().getValue();
+        float sliderMin = (float)slider->getMinValueObject().getValue();
+        float sliderMax = (float)slider->getMaxValueObject().getValue();
         
         // Set the slider labels with the values from the slider
-        grainStartMinLab.setText(String(sliderMin) + "%", NotificationType::dontSendNotification);
-        grainStartMaxLab.setText(String(sliderMax) + "%", NotificationType::dontSendNotification);
+        grainStartMinLab.setText(String((int)(sliderMin * 100)) + "%", NotificationType::dontSendNotification);
+        grainStartMaxLab.setText(String((int)(sliderMax * 100)) + "%", NotificationType::dontSendNotification);
         
         // Set the relevant value in the GUI values struct
         guiMap.grainStartPosMin = sliderMin;
@@ -528,7 +541,7 @@ void MainComponent::sliderValueChanged(Slider* slider)
         int sliderMin = (int)slider->getMinValueObject().getValue();
         int sliderMax = (int)slider->getMaxValueObject().getValue();
         
-        // Set the slider labels with the valiues from the slider
+        // Set the slider labels with the values from the slider
         grainOnsetMinLab.setText(String(sliderMin) + "ms", NotificationType::dontSendNotification);
         grainOnsetMaxLab.setText(String(sliderMax) + "ms", NotificationType::dontSendNotification);
         
@@ -557,8 +570,8 @@ void MainComponent::sliderValueChanged(Slider* slider)
         float sliderMax = slider->getMaxValueObject().getValue();
         
         // Set the slider labels with the values from the slider
-        grainRateMinLab.setText(String(sliderMin, 1), NotificationType::dontSendNotification);
-        grainRateMaxLab.setText(String(sliderMax, 1), NotificationType::dontSendNotification);
+        grainRateMinLab.setText(String(sliderMin, 2), NotificationType::dontSendNotification);
+        grainRateMaxLab.setText(String(sliderMax, 2), NotificationType::dontSendNotification);
         
         // Set the relevant values in the GUI values struct
         guiMap.grainRateMin = sliderMin;
@@ -570,7 +583,47 @@ void MainComponent::sliderValueChanged(Slider* slider)
     }
 }
 
-guiMap_t* MainComponent::getGuiMap()
+void MainComponent::comboBoxChanged(ComboBox *comboBox)
 {
-    return &this->guiMap;
+    auto id = comboBox->getSelectedId();
+    
+    if (comboBox == &envSelectBox)
+    {
+        if (id == 0)
+        {
+            guiMap.envelope = kTukey;
+        }
+        else if (id == 1)
+        {
+            guiMap.envelope = kRectangle;
+        }
+        else if (id == 2)
+        {
+            guiMap.envelope = kTukey;
+        }
+        else
+        {
+            std::cout << "Envelope ComboBox Selection Error" << std::endl;
+        }
+    }
+    else if (comboBox == &grainStartBox)
+    {
+        guiMap.startBinding = id - 1;
+    }
+    else if (comboBox == &grainOnsetBox)
+    {
+        guiMap.onsetBinding = id - 1;
+    }
+    else if (comboBox == &grainLengthBox)
+    {
+        guiMap.lengthBinding = id - 1;
+    }
+    else if (comboBox == &grainRateBox)
+    {
+        guiMap.rateBinding = id - 1;
+    }
+    else
+    {
+        std::cout << "ComboBox not recognised" << std::endl;
+    }
 }

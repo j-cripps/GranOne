@@ -11,7 +11,12 @@
 #define debug_comments 0
 using namespace tinyxml2;
 
-
+template<typename T>
+bool isEqual(std::vector<T> const &v1, std::vector<T> const &v2)
+{
+    return (v1.size() == v2.size() &&
+            std::equal(v1.begin(), v1.end(), v2.begin()));
+}
 
 Boids::Boids(){
     //Object created
@@ -28,7 +33,7 @@ Boids::~Boids(){
  * Implemented using the following tutorial
  * https://shilohjames.wordpress.com/2014/04/27/tinyxml2-tutorial/#XML-CreateXMLDocument
  */
-std::vector<Boids::boid_struct> parseXMLBOID(const char * file_path, Boids::boid_range_t* boidRange)
+std::vector<std::vector<Boids::boidParam_t>> parseXMLBOID(const char * file_path, std::vector<Boids::boidParam_t>* boidRange)
 {
     // Declares an instance of the boid class
     Boids boid;
@@ -67,34 +72,88 @@ std::vector<Boids::boid_struct> parseXMLBOID(const char * file_path, Boids::boid
     // Maximum Velocities
     max_velocities_data->QueryAttribute("x_max_velocity", &xm_velocity_attribute);
     boid.x_max_velocity = (float)xm_velocity_attribute;
-    boidRange->x_max_velocity = boid.x_max_velocity;
-    boidRange->x_min_velocity = -boid.x_max_velocity;
+    //boidRange->x_max_velocity = boid.x_max_velocity;
+    //boidRange->x_min_velocity = -boid.x_max_velocity;
+    Boids::boidParam_t xVelMaxParam;
+    xVelMaxParam.numType = Boids::floatType;
+    xVelMaxParam.floatNum = boid.x_max_velocity;
+    boidRange->at(xVelMax) = xVelMaxParam;
+    
+    Boids::boidParam_t xVelMinParam;
+    xVelMinParam.numType = Boids::floatType;
+    xVelMinParam.floatNum = -boid.x_max_velocity;
+    boidRange->at(xVelMin) = xVelMinParam;
     
     max_velocities_data->QueryAttribute("y_max_velocity", &ym_velocity_attribute);
     boid.y_max_velocity = (float)ym_velocity_attribute;
-    boidRange->y_max_velocity = boid.y_max_velocity;
-    boidRange->y_min_velocity = -boid.y_max_velocity;
+    //boidRange->y_max_velocity = boid.y_max_velocity;
+    //boidRange->y_min_velocity = -boid.y_max_velocity;
+    Boids::boidParam_t yVelMaxParam;
+    yVelMaxParam.numType = Boids::floatType;
+    yVelMaxParam.floatNum = boid.y_max_velocity;
+    boidRange->at(yVelMax) = yVelMaxParam;
+    
+    Boids::boidParam_t yVelMinParam;
+    yVelMinParam.numType = Boids::floatType;
+    yVelMinParam.floatNum = -boid.y_max_velocity;
+    boidRange->at(yVelMin) = yVelMinParam;
     
     max_velocities_data->QueryAttribute("z_max_velocity", &zm_velocity_attribute);
     boid.z_max_velocity = (float)zm_velocity_attribute;
-    boidRange->z_max_velocity = boid.z_max_velocity;
-    boidRange->z_min_velocity = -boid.z_max_velocity;
+    //boidRange->z_max_velocity = boid.z_max_velocity;
+    //boidRange->z_min_velocity = -boid.z_max_velocity;
+    Boids::boidParam_t zVelMaxParam;
+    zVelMaxParam.numType = Boids::floatType;
+    zVelMaxParam.floatNum = boid.z_max_velocity;
+    boidRange->at(zVelMax) = zVelMaxParam;
+    
+    Boids::boidParam_t zVelMinParam;
+    zVelMinParam.numType = Boids::floatType;
+    zVelMinParam.floatNum = -boid.z_max_velocity;
+    boidRange->at(zVelMin) = yVelMinParam;
     
     // Maximum Coordinates
     max_coordinates_data->QueryAttribute("x_max_coordinate", &xm_coordinate_attribute);
     boid.x_max_coordinate = (uint32_t)xm_coordinate_attribute;
-    boidRange->x_max_coordinate = boid.x_max_coordinate;
-    boidRange->x_min_coordinate = 0;
+    //boidRange->x_max_coordinate = boid.x_max_coordinate;
+    //boidRange->x_min_coordinate = 0;
+    Boids::boidParam_t xCoordMaxParam;
+    xCoordMaxParam.numType = Boids::intType;
+    xCoordMaxParam.intNum = boid.x_max_coordinate;
+    boidRange->at(xCoordMax) = xCoordMaxParam;
+    
+    Boids::boidParam_t xCoordMinParam;
+    xCoordMinParam.numType = Boids::intType;
+    xCoordMinParam.intNum = 0;
+    boidRange->at(xCoordMin) = xCoordMinParam;
     
     max_coordinates_data->QueryAttribute("y_max_coordinate", &ym_coordinate_attribute);
     boid.y_max_coordinate = (uint32_t)ym_coordinate_attribute;
-    boidRange->y_max_coordinate = boid.y_max_coordinate;
-    boidRange->y_min_coordinate = 0;
+    //boidRange->y_max_coordinate = boid.y_max_coordinate;
+    //boidRange->y_min_coordinate = 0;
+    Boids::boidParam_t yCoordMaxParam;
+    yCoordMaxParam.numType = Boids::intType;
+    yCoordMaxParam.intNum = boid.y_max_coordinate;
+    boidRange->at(yCoordMax) = yCoordMaxParam;
+    
+    Boids::boidParam_t yCoordMinParam;
+    yCoordMinParam.numType = Boids::intType;
+    yCoordMinParam.intNum = 0;
+    boidRange->at(yCoordMin) = yCoordMinParam;
     
     max_coordinates_data->QueryAttribute("z_max_coordinate", &zm_coordinate_attribute);
     boid.z_max_coordinate = (uint32_t)zm_coordinate_attribute;
-    boidRange->z_max_coordinate = boid.z_max_coordinate;
-    boidRange->z_min_coordinate = 0;
+    //boidRange->z_max_coordinate = boid.z_max_coordinate;
+    //boidRange->z_min_coordinate = 0;
+    Boids::boidParam_t zCoordMaxParam;
+    zCoordMaxParam.numType = Boids::intType;
+    zCoordMaxParam.intNum = boid.z_max_coordinate;
+    boidRange->at(zCoordMax) = zCoordMaxParam;
+    
+    Boids::boidParam_t zCoordMinParam;
+    zCoordMinParam.numType = Boids::intType;
+    zCoordMinParam.intNum = 0;
+    boidRange->at(zCoordMin) = zCoordMinParam;
     
 #if debug_comments
     printf("vel: \txmv: %f\t ymv: %f\t zmv:%f\n", boid.x_max_velocity, boid.y_max_velocity, boid.z_max_velocity);
@@ -105,13 +164,16 @@ std::vector<Boids::boid_struct> parseXMLBOID(const char * file_path, Boids::boid
    
     // Gets the first occurance of the boid node in the file
     XMLElement * boid_data = root->FirstChildElement("boid");
-    std::vector<Boids::boid_struct> flock_data;
+    //std::vector<Boids::boid_struct> flock_data;
+    std::vector<std::vector<Boids::boidParam_t>> flockData;
     
     // boid_data will become nullptr when there are no sibling elements left
     while (boid_data != nullptr)
     {
         
-        Boids::boid_struct individual_boid;
+        //Boids::boid_struct individual_boid;
+        std::vector<Boids::boidParam_t> individualBoid;
+        individualBoid.resize(numOfBindings);
         
         // Core boid data
         
@@ -130,35 +192,71 @@ std::vector<Boids::boid_struct> parseXMLBOID(const char * file_path, Boids::boid
         
         // ID
         id->QueryIntText(&id_value);
-        individual_boid.ID = (uint32_t)id_value;
+        //individual_boid.ID = (uint32_t)id_value;
+        Boids::boidParam_t idParam;
+        idParam.numType = Boids::intType;
+        idParam.intNum = id_value;
+        individualBoid[boidID] = idParam;
         
         // Coordinate data
         x_coordinate->QueryIntText(&x_coordinate_data);
-        individual_boid.x_coordinate = (uint32_t)x_coordinate_data;
+        //individual_boid.x_coordinate = (uint32_t)x_coordinate_data;
+        Boids::boidParam_t xCoordParam;
+        xCoordParam.numType = Boids::intType;
+        xCoordParam.intNum = x_coordinate_data;
+        individualBoid[xCoordinate] = xCoordParam;
         
         y_coordinate->QueryIntText(&y_coordinate_data);
-        individual_boid.y_coordinate = (uint32_t)y_coordinate_data;
+        //individual_boid.y_coordinate = (uint32_t)y_coordinate_data;
+        Boids::boidParam_t yCoordParam;
+        yCoordParam.numType = Boids::intType;
+        yCoordParam.intNum = y_coordinate_data;
+        individualBoid[yCoordinate] = yCoordParam;
         
         z_coordinate->QueryIntText(&z_coordinate_data);
-        individual_boid.z_coordinate = (uint32_t)z_coordinate_data;
+        //individual_boid.z_coordinate = (uint32_t)z_coordinate_data;
+        Boids::boidParam_t zCoordParam;
+        zCoordParam.numType = Boids::intType;
+        zCoordParam.intNum = z_coordinate_data;
+        individualBoid[zCoordinate] = zCoordParam;
         
         // Velocity Data
         x_velocity->QueryFloatText(&x_velocity_data);
-        individual_boid.x_velocity = (float)x_velocity_data;
+        //individual_boid.x_velocity = (float)x_velocity_data;
+        Boids::boidParam_t xVelParam;
+        xVelParam.numType = Boids::floatType;
+        xVelParam.floatNum = x_velocity_data;
+        individualBoid[xVelocity] = xVelParam;
         
         y_velocity->QueryFloatText(&y_velocity_data);
-        individual_boid.y_velocity = (float)y_velocity_data;
+        //individual_boid.y_velocity = (float)y_velocity_data;
+        Boids::boidParam_t yVelParam;
+        yVelParam.numType = Boids::floatType;
+        yVelParam.floatNum = y_velocity_data;
+        individualBoid[yVelocity] = yVelParam;
         
         z_velocity->QueryFloatText(&z_velocity_data);
-        individual_boid.z_velocity = (float)z_velocity_data;
+        //individual_boid.z_velocity = (float)z_velocity_data;
+        Boids::boidParam_t zVelParam;
+        zVelParam.numType = Boids::floatType;
+        zVelParam.floatNum = z_velocity_data;
+        individualBoid[zVelocity] = zVelParam;
         
         // Active
         active->QueryIntText(&active_data);
-        individual_boid.active = (uint32_t)active_data;
+        //individual_boid.active = (uint32_t)active_data;
+        Boids::boidParam_t boidActive;
+        boidActive.numType = Boids::intType;
+        boidActive.intNum = active_data;
+        individualBoid[isBoidActive] = boidActive;
         
         // Species
         species->QueryIntText(&species_data);
-        individual_boid.species = (uint32_t)species_data;
+        //individual_boid.species = (uint32_t)species_data;
+        Boids::boidParam_t boid_Species;
+        boid_Species.numType = Boids::intType;
+        boid_Species.intNum = species_data;
+        individualBoid[boidSpecies] = boid_Species;
         
 #if debug_comments
         printf("\n\nID: %i\n", individual_boid.ID);
@@ -183,23 +281,23 @@ std::vector<Boids::boid_struct> parseXMLBOID(const char * file_path, Boids::boid
         
         // Average Coordinate Data
         x_avg_coordinate->QueryIntText(&x_avg_coordinate_data);
-        individual_boid.neighbourhood_data.x_avg_coordinate = (uint32_t)x_avg_coordinate_data;
+        //individual_boid.neighbourhood_data.x_avg_coordinate = (uint32_t)x_avg_coordinate_data;
         
         y_avg_coordinate->QueryIntText(&y_avg_coordinate_data);
-        individual_boid.neighbourhood_data.y_avg_coordinate = (uint32_t)y_avg_coordinate_data;
+        //individual_boid.neighbourhood_data.y_avg_coordinate = (uint32_t)y_avg_coordinate_data;
         
         z_avg_coordinate->QueryIntText(&z_avg_coordinate_data);
-        individual_boid.neighbourhood_data.z_avg_coordinate = (uint32_t)z_avg_coordinate_data;
+        //individual_boid.neighbourhood_data.z_avg_coordinate = (uint32_t)z_avg_coordinate_data;
         
         // Average Velocity Data
         x_avg_velocity->QueryFloatText(&x_avg_velocity_data);
-        individual_boid.neighbourhood_data.x_avg_velocity = (float)x_avg_velocity_data;
+        //individual_boid.neighbourhood_data.x_avg_velocity = (float)x_avg_velocity_data;
         
         y_avg_velocity->QueryFloatText(&y_avg_velocity_data);
-        individual_boid.neighbourhood_data.y_avg_velocity = (float)y_avg_velocity_data;
+        //individual_boid.neighbourhood_data.y_avg_velocity = (float)y_avg_velocity_data;
         
         z_avg_velocity->QueryFloatText(&z_avg_velocity_data);
-        individual_boid.neighbourhood_data.z_avg_velocity = (float)z_avg_velocity_data;
+        //individual_boid.neighbourhood_data.z_avg_velocity = (float)z_avg_velocity_data;
         
 #if debug_comments
         printf("neighbourhood: \tavg_x_vel: %f \tavg_y_vel: %f \tavg_z_vel: %f\n",individual_boid.neighbourhood_data.x_avg_velocity, individual_boid.neighbourhood_data.y_avg_velocity, individual_boid.neighbourhood_data.z_avg_velocity);
@@ -223,7 +321,7 @@ std::vector<Boids::boid_struct> parseXMLBOID(const char * file_path, Boids::boid
                 neighbour_id = neighbour_id->NextSiblingElement("neighbour_id");
             }
             // Assigns them to the struct
-            individual_boid.neighbourhood_data.neighbour_IDs = id_list;
+            //individual_boid.neighbourhood_data.neighbour_IDs = id_list;
             
 #if debug_comments
             printf("neighbour ids:");
@@ -239,12 +337,45 @@ std::vector<Boids::boid_struct> parseXMLBOID(const char * file_path, Boids::boid
         // Finds if there is a sibling element and reassigns boid_data to it
         boid_data = boid_data->NextSiblingElement("boid");
         
-        flock_data.push_back(individual_boid);
+        //flock_data.push_back(individual_boid);
+        flockData.push_back(individualBoid);
     }
     printf("Finished parsing\n");
-    return flock_data;
+    
+    std::stringstream ss;
+    
+    {
+        cereal::BinaryOutputArchive oarchive(ss); // Create an output archive
+        
+        oarchive(flockData); // Write the data to the archive
+    } // archive goes out of scope, ensuring all contents are flushed
+    
+    std::string s = ss.str();
+    long int sSize = s.length();
+    std::cout << "Uncompressed Size: " << sSize << std::endl;
+    
+    std::string compressed;
+    snappy::Compress(s.data(), s.size(), &compressed);
+    long int compressSize = compressed.length();
+    std::cout << "Compressed Size: " << compressSize << std::endl;
+    
+    std::string decompressed;
+    snappy::Uncompress(compressed.data(), compressed.size(), &decompressed);
+    ss.str() = decompressed;
+    
+    std::vector<std::vector<Boids::boidParam_t>> flockDataDecoded;
+    
+    {
+        cereal::BinaryInputArchive iarchive(ss); // Create an input archive
+        
+        iarchive(flockDataDecoded); // Read the data from the archive
+    }
+    
+    //return flock_data;
+    return flockData;
 };
 
+/*
 Boids::boid_range_t Boids::getBoidRange()
 {
     localBoidRange.x_max_coordinate = x_max_coordinate;
@@ -263,3 +394,4 @@ Boids::boid_range_t Boids::getBoidRange()
     
     return localBoidRange;
 }
+ */
