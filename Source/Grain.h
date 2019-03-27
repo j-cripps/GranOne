@@ -13,6 +13,8 @@
 #include "../JuceLibraryCode/JuceHeader.h"
 #include "Envelope.h"
 #include "parse.hpp"
+#include "Encoder.h"
+//#include "AudioComponent.h"
 
 #define SCHED_ENV 0
 
@@ -20,7 +22,7 @@ class Grain
 {
 public:
     //==============================================================================
-    Grain(int boidID, bool isActive, unsigned long long int onset, const int length, int startPosition, envType env, float amplitude, float panPosition, float playbackRate);
+    Grain(int boidID, bool isActive, unsigned long long int onset, const int length, int startPosition, envType env, float amplitude, float panPosition, float playbackRate, uint32_t xCoord, uint32_t yCoord, uint32_t zCoord);
     Grain();
     ~Grain();
     
@@ -34,10 +36,13 @@ public:
     float playbackRate;
     bool isPlaying;
     bool isActive;
+    uint32_t xCoord;
+    uint32_t yCoord;
+    uint32_t zCoord;
     
     
     //==============================================================================
-    void processAudio(const AudioSourceChannelInfo& bufferToFill,
+    void processAudio(AudioBuffer<float>* bufferToFill,
                       AudioSampleBuffer& buffer,
                       int nInputChannels,
                       int nOutputChannels,

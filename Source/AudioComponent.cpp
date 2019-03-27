@@ -11,7 +11,7 @@
 #include "AudioComponent.h"
 
 AudioComponent::AudioComponent(guiMap_t* guiMap)
-    : Thread("Scheduler Thread"), masterGuiMap(guiMap)
+    : Thread("Network Thread"), masterGuiMap(guiMap)
 {
     // Resize the array to be the correct size
     boidRanges.resize(numberOfMaxBindings);
@@ -27,6 +27,13 @@ AudioComponent::AudioComponent(guiMap_t* guiMap)
     // specify the number of input and output channels that we want to open
 #if DECODE_METHOD == 1
     setAudioChannels (0, 4);
+    file.create();
+    writer.reset(wavFormat.createWriterFor(new FileOutputStream (file),
+                                           44100,
+                                           4,
+                                           16,
+                                           {},
+                                           0));
 #elif DECODE_METHOD == 2
     setAudioChannels(0, 4);
 #else
@@ -40,8 +47,12 @@ AudioComponent::AudioComponent(guiMap_t* guiMap)
     time = 0;
     boidFrame = 0;
     
+    bool socketOpened = socket.bindToPort(80);
+    if (socketOpened) std::cout << "Socket Opened" << std::endl;
+    std::cout << "Host Name: " << socket.getHostName() << std::endl;
+    
     // Start the thread to manage scheduler
-    startThread(8);
+    startThread();
     
     // Create the grainStack from the first frame of the boids, before any audio starts playing.
     // Essentially starts the process from the beginning again if it's in offline mode (XML)
@@ -79,6 +90,9 @@ void AudioComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRa
 void AudioComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFill)
 {
     kdebug_signpost_start(2, 0, 0, 0, 3);
+    
+    //std::cout << "Number of Channels: " << bufferToFill.buffer->getNumChannels() << std::endl;
+    
     // This is the part that seperates this thread from the previous by making a new
     // copy, then checking if buffer is not null pointer
     ReferenceCountedBuffer::Ptr retainedBuffer(currentBuffer);
@@ -213,18 +227,19 @@ void AudioComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFi
                 if (time <= (grainStack[i].onset + grainStack[i].length))
                 {
                     //std::cout << i << ": " << "time: " << time << "onset + length: " << (grainStack[i].onset + grainStack[i].length) << std::endl;
-                    grainStack[i].processAudio(bufferToFill,
-                                                    *buffer,
-                                                    nInputChannels,
-                                                    nOutputChannels,
-                                                    nOutputSamplesRemaining,
-                                                    nInputSamples,
-                                                    time);
+                    grainStack[i].processAudio(bufferToFill.buffer,
+                                               *buffer,
+                                               nInputChannels,
+                                               nOutputChannels,
+                                               nOutputSamplesRemaining,
+                                               nInputSamples,
+                                               time);
                 }
             }
         }
         ++time;
     }
+
 #endif
     kdebug_signpost_end(2, 0, 0, 0, 3);
 }
@@ -246,52 +261,54 @@ void AudioComponent::run()
 {
     while (!threadShouldExit())
     {
-#if SCHED_THREAD
-        double time1 = Time::getMillisecondCounterHiRes();
-
-        //std::cout << "Grain Stack Size: " << grainStack.size() << std::endl;
-        kdebug_signpost_start(1,0,0,0,0);
-        
-        // Delete grains
-        if (grainStack.size() > 0)
+        std::cout << "Network Thread Entered" << std::endl;
+        char buffer[20000];
+        std::vector<Boids::boid_struct> decoded;
+        socket.connect("192.168.0.3", 80, 1000);
+        int ready = socket.waitUntilReady(false, 1000);
+        if (ready == 1)
         {
-            for (auto i = grainStack.size() - 1; i >= 0; --i)
-            {
-                auto grainEnd = grainStack[i].onset + grainStack[i].length;
-                auto hasEnded = grainEnd < time;
-                if (hasEnded)
-                {
-                    grainStack.remove(i);
-                }
-                //std::cout   << "hasEnded: "     << hasEnded
-                      //      << "\tgrainEnd: "   << grainEnd
-                       //      << "\ttime: "       << time
-                      //      << std::endl;
-            }
-        }
-        
-        // Add grains
-        if (currentBuffer != nullptr)
-        {
-            // Make local copy of grain stack to avoid blocking audio thread
-            // Array<Grain, CriticalSection> localGrainStack(grainStack);
             
-            auto nSamples = currentBuffer->getAudioSampleBuffer()->getNumSamples();
-            int onset = 1000;
-            int length = 4410;
-            int startPosition = -1000;
-            for (int i = 0; i < 1; ++i)
+            std::cout << "Ready for Reading" << std::endl;
+            // Ready for reading
+            socket.read(&buffer, 20000, true);
+            std::string lengthString(&buffer[0], 4);
+            std::string test(&buffer[0], 10445);
+            std::cout << "Packet Length: " << test.length() << std::endl;
+            std::cout << test << std::endl;
+            std::string bufToDecode(&buffer[0], 10445);
+            std::istringstream ss(bufToDecode);
+            std::cout << "StringStream Length: " << ss.str().length() << std::endl;
             {
-                grainStack.push_back(Grain(time + onset, length, wrap(startPosition, 0, nSamples), kTukey, 1.0));
+                boost::archive::text_iarchive ia(ss);
+                // read class state from archive
+                ia >> decoded;
             }
-            // Once all new grains have been created then replace grainStack with localGrainStack
-            // grainStack = localGrainStack;
+    
+            std::cout << "Vector size: " << decoded.size() << std::endl;
+            
+            // Convert the boid struct stack received from the network and push into the lock free ring buffer
+            // so that the audio thread can pop it out the other side and use it to generate grains
+            bool pushed = boidQueue.push(convertBoids(decoded));
+            if (pushed == false)
+            {
+                std::cout << "Could not push boid struct stack into queue" << std::endl;
+            }
         }
-        double time2 = Time::getMillisecondCounterHiRes();
-        std::cout << "Scheduler Elapsed: " << time2 - time1 << "\t" << "Stack Size: " << grainStack.size() << std::endl;
-        kdebug_signpost_end(1, 0, 0, 0, 0);
-#endif
-        wait(250);
+        else if (ready == 0)
+        {
+            // Time out
+            std::cout << "Network Time Out" << std::endl;
+        }
+        else
+        {
+            // Error
+            std::cout << "Network Error" << std::endl;
+        }
+        
+        
+        wait(10000);
+        std::cout << "Network Thread Exit" << std::endl;
     }
 }
 
@@ -470,6 +487,7 @@ Grain AudioComponent::createGrainFromBoid(std::vector<Boids::boidParam_t>* boid,
     // Amplitude set by the master vol control, more to prevent clipping at output than to actually increase volume
     float localAmplitude = localGuiMap.grainMasterVol;
     
+#if DECODE_METHOD == 0
     // TEMPORARY
     // Map X coordinate of grain to pan position until ambisonics is implemented
     Boids::boidParam_t panParam = (*boid)[xCoordinate];
@@ -478,6 +496,9 @@ Grain AudioComponent::createGrainFromBoid(std::vector<Boids::boidParam_t>* boid,
                                       2000,
                                       -1.0,
                                       1.0);
+#else
+    float localPanPosition = 0.0f;
+#endif
     
     // GUI mapping for playback rate
     Boids::boidParam_t rateParam = (*boid)[localGuiMap.rateBinding];
@@ -513,7 +534,7 @@ Grain AudioComponent::createGrainFromBoid(std::vector<Boids::boidParam_t>* boid,
     }
      */
     
-    return Grain((*boid)[boidID].intNum, (*boid)[isBoidActive].intNum, time + localOnset, localLength, localStartPosition, localEnv, localAmplitude, localPanPosition, localGuiMap.grainRateMax);
+    return Grain((*boid)[boidID].intNum, (*boid)[isBoidActive].intNum, time + localOnset, localLength, localStartPosition, localEnv, localAmplitude, localPanPosition, localGuiMap.grainRateMax, (*boid)[xCoordinate].intNum, (*boid)[yCoordinate].intNum, (*boid)[zCoordinate].intNum);
 }
 
 void AudioComponent::generateGrainFromBoid(Grain* grain, std::vector<Boids::boidParam_t>* boid, std::vector<Boids::boidParam_t>* range)
@@ -588,6 +609,7 @@ void AudioComponent::generateGrainFromBoid(Grain* grain, std::vector<Boids::boid
     float localAmplitude = localGuiMap.grainMasterVol;
     grain->amplitude = localAmplitude;
     
+#if DECODE_METHOD == 0
     // TEMPORARY
     // Map X coordinate of grain to pan position until ambisonics is implemented
     Boids::boidParam_t panParam = (*boid)[xCoordinate];
@@ -597,6 +619,9 @@ void AudioComponent::generateGrainFromBoid(Grain* grain, std::vector<Boids::boid
                                       -1.0,
                                       1.0);
     grain->panPosition = localPanPosition;
+#else
+    grain->panPosition = 0.0f;
+#endif
     
     // GUI mapping for playback rate
     Boids::boidParam_t rateParam = (*boid)[localGuiMap.rateBinding];
@@ -634,6 +659,12 @@ void AudioComponent::generateGrainFromBoid(Grain* grain, std::vector<Boids::boid
     grain->playbackRate = localPlaybackRate;
     
     grain->isActive = (*boid)[isBoidActive].intNum;
+    
+    grain->xCoord = (*boid)[xCoordinate].intNum;
+    
+    grain->yCoord = (*boid)[yCoordinate].intNum;
+    
+    grain->zCoord = (*boid)[zCoordinate].intNum;
 }
 
 void AudioComponent::updateGrainFromBoid(Grain* grain, std::vector<Boids::boidParam_t>* boid, std::vector<Boids::boidParam_t>* range)
@@ -644,6 +675,7 @@ void AudioComponent::updateGrainFromBoid(Grain* grain, std::vector<Boids::boidPa
     float localAmplitude = localGuiMap.grainMasterVol;
     grain->amplitude = localAmplitude;
     
+#if DECODE_METHOD == 0
     // TEMPORARY
     // Map X coordinate of grain to pan position until ambisonics is implemented
     Boids::boidParam_t panParam = (*boid)[xCoordinate];
@@ -653,6 +685,15 @@ void AudioComponent::updateGrainFromBoid(Grain* grain, std::vector<Boids::boidPa
                                       -1.0,
                                       1.0);
     grain->panPosition = localPanPosition;
+#else
+    grain->panPosition = 0.0f;
+#endif
     
     grain->isActive = (*boid)[isBoidActive].intNum;
+    
+    grain->xCoord = (*boid)[xCoordinate].intNum;
+    
+    grain->yCoord = (*boid)[yCoordinate].intNum;
+    
+    grain->zCoord = (*boid)[zCoordinate].intNum;
 }

@@ -12,63 +12,55 @@
 
 
 //============Angles===========
-float getAzimuthAngle(int x, int y, int z){
-   
-    
-    
-    
+float getAzimuthAngle(int x, int y, int z)
+{
     float azimuth;
     
-    if (x == 0 && z > 0){
-        azimuth = 360;
-    }
-    else if (x == 0 && z < 0){
-        azimuth = 90;
-    }
-    else
-    {
-    azimuth = atan(z/x);
-    }
-    return azimuth;
+    float localX = (float)(x - 1000);
+    float localZ = (float)(z - 1000);
     
+    azimuth = atan2(localX, localZ);
+    
+    //if (azimuth < 0) azimuth += (2 * M_PI);
+    
+    return azimuth;
 }
 
-float getElevationAngle(int x, int y, int z, float azimuth){
+float getElevationAngle(int x, int y, int z)
+{
+    float elevation;
     
-    float elevation = asin((y*sin(azimuth))/z);
+    float localY = (float)(y - 1000);
+    float localZ = (float)(z - 1000);
+    
+    elevation = atan2(localY, localZ);
+    
+    //if (elevation < 0) elevation += (2 * M_PI);
+    
     return elevation;
-    
 }
 
 
 
 //=======Channel Encoding ===================
-void encodeW(float theta, float phi){
+float encodeW(float currentSample, float theta, float phi)
+{
+    // float distanceScaling = sqrt((y^2) + (x^2));
     
-   // float distanceScaling = sqrt((y^2) + (x^2));
-    
-    //for(int i = 0; i < nSamples; i++){
-  
-    encodedW = currentSample*(1/sqrt(2));
-        
-    //}
-
+    return currentSample * (1 / sqrt(2));
 }
 
-void encodeX(float theta, float phi){
-    
-    encodedX = currentSample*((sqrt(3))*(cos(theta))*(cos(phi)));
-    
+float encodeX(float currentSample, float theta, float phi)
+{
+    return currentSample * cos(theta) * cos(phi);
 }
 
-void encodeY(float theta, float phi){
-
-    encodedY = currentSample*((sqrt(3))*(sin(theta))*(cos(phi)));
-    
+float encodeY(float currentSample, float theta, float phi)
+{
+    return currentSample * sin(theta) * cos(phi);
 }
 
-void encodeZ(float theta, float phi){
-    
-    encodedZ = currentSample*((sqrt(3))*(sin(theta)));
-    
+float encodeZ(float currentSample, float theta, float phi)
+{
+    return currentSample * sin(theta);
 }

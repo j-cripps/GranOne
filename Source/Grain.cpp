@@ -12,9 +12,9 @@
 
 //==============================================================================
 
-Grain::Grain(int boidID, bool isActive, unsigned long long int onset, const int length, int startPosition, envType env, float amplitude, float panPosition, float playbackRate)
+Grain::Grain(int boidID, bool isActive, unsigned long long int onset, const int length, int startPosition, envType env, float amplitude, float panPosition, float playbackRate, uint32_t xCoord, uint32_t yCoord, uint32_t zCoord)
     : boidID(boidID), onset(onset), length(length), startPosition(startPosition), envelope(env),
-      amplitude(amplitude), panPosition(panPosition), playbackRate(playbackRate)
+      amplitude(amplitude), panPosition(panPosition), playbackRate(playbackRate), xCoord(xCoord), yCoord(yCoord), zCoord(zCoord)
 #if SCHED_ENV
 , envBuffer(new Array<float, CriticalSection>)
 #endif
@@ -58,6 +58,9 @@ envBuffer(new Array<float, CriticalSection>)
     playbackRate = 1.0;
     isPlaying = false;
     envelope = kRectangle;
+    xCoord = 0;
+    yCoord = 0;
+    zCoord = 0;
 };
 
 Grain::~Grain()
@@ -66,7 +69,7 @@ Grain::~Grain()
 };
 
 //==============================================================================
-void Grain::processAudio(const AudioSourceChannelInfo& bufferToFill,
+void Grain::processAudio(AudioBuffer<float>* bufferToFill,
                          AudioSampleBuffer &buffer,
                          int nInputChannels,
                          int nOutputChannels,
@@ -74,9 +77,14 @@ void Grain::processAudio(const AudioSourceChannelInfo& bufferToFill,
                          int nBufSamples,
                          unsigned long long int time)
 {
+#if DECODE_METHOD == 2
+    float azimuth = getAzimuthAngle(xCoord, yCoord, zCoord);
+    float elevation = getElevationAngle(xCoord, yCoord, zCoord);
+#endif
+    
     for (auto channel = 0; channel < nOutputChannels; ++channel)
     {
-        auto* channelData = bufferToFill.buffer->getWritePointer(channel);
+        auto* channelData = bufferToFill->getWritePointer(channel);
         const auto* fileData = buffer.getReadPointer(channel % nInputChannels);
         
         float position = (time - onset) * playbackRate;
@@ -94,38 +102,67 @@ void Grain::processAudio(const AudioSourceChannelInfo& bufferToFill,
         //float outputSample = linearInterpolant(eta, currentSamp, previousSamp);
         float outputSample = cubicInterpolant(eta, y3, y2, y1, y0);
         
+#if DECODE_METHOD == 0
         if (channel == 0)
         {
-#if SCHED_ENV
+        #if SCHED_ENV
             channelData[time % nBufToFillSamples] += outputSample *
                                                       this->envBuffer->getUnchecked((length - 1) - ((onset + length) - time))) *
             ((MathConstants<float>::sqrt2 / 2) *(cos(panPosition * (MathConstants<float>::pi / 4)) - sin(panPosition * (MathConstants<float>::pi / 4))));
-#else
+        #else
             
             channelData[time % nBufToFillSamples] += outputSample *
                                                       calculateEnvAtCurrentSample(time) *
             ((MathConstants<float>::sqrt2 / 2) *(cos(panPosition * (MathConstants<float>::pi / 4)) - sin(panPosition * (MathConstants<float>::pi / 4))));
             
-#endif
+        #endif
         }
         else if (channel == 1)
         {
-#if SCHED_ENV
+        #if SCHED_ENV
             channelData[time % nBufToFillSamples] += outputSample *
                                                       this->envBuffer->getUnchecked((length - 1) - ((onset + length) - time))) *
             ((MathConstants<float>::sqrt2 / 2) *(cos(panPosition * (MathConstants<float>::pi / 4)) + sin(panPosition * (MathConstants<float>::pi / 4))));
-#else
+        #else
             
             channelData[time % nBufToFillSamples] += outputSample *
                                                       calculateEnvAtCurrentSample(time) *
             ((MathConstants<float>::sqrt2 / 2) *(cos(panPosition * (MathConstants<float>::pi / 4)) + sin(panPosition * (MathConstants<float>::pi / 4))));
             
-#endif
+        #endif
         }
         else
         {
-            
+            std::cout << "Stereo Channel Number Exceeded" << std::endl;
         }
+#elif DECODE_METHOD == 2
+        
+        if (channel == 0)       // W
+        {
+            channelData[time % nBufToFillSamples] += encodeW((outputSample * calculateEnvAtCurrentSample(time)), azimuth, elevation);
+        }
+        else if (channel == 1)  // X
+        {
+            channelData[time % nBufToFillSamples] += encodeX((outputSample * calculateEnvAtCurrentSample(time)), azimuth, elevation);
+        }
+        else if (channel == 2)  // Y
+        {
+            channelData[time % nBufToFillSamples] += encodeY((outputSample * calculateEnvAtCurrentSample(time)), azimuth, elevation);
+        }
+        else if (channel == 3)  // Z
+        {
+            channelData[time % nBufToFillSamples] += encodeZ((outputSample * calculateEnvAtCurrentSample(time)), azimuth, elevation);
+        }
+        else
+        {
+            std::cout << "Ambisonic Channel Number Exceeded" << std::endl;
+        }
+        
+#else
+        
+        std::cout << "Ambisonic Decode Channel Error" << std::endl;
+        
+#endif
     }
     //std::cout <<"time: " << time << "onset + length: " << onset + length << "Array Index: " << (length - 1) - ((onset + length) - (int)time) << std::endl;
 }

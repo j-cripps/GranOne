@@ -16,6 +16,7 @@
 #include "sys/kdebug_signpost.h"
 #include "parse.hpp"
 #include "GuiParameters.h"
+#include <boost/lockfree/spsc_queue.hpp>
 
 #define SCHED_THREAD 0
 #define GRAIN_LIMIT 100
@@ -23,7 +24,6 @@
 // 0 - Stereo Decode
 // 1 - Ambisonic Decode to Disk
 // 2 - Ambisonic Decode to Output
-#define DECODE_METHOD 0
 
 class AudioComponent    : public AudioAppComponent,
                           private Thread
@@ -88,6 +88,15 @@ private:
     uint32_t millisecondCount;
     guiMap_t localGuiMap;
     guiMap_t* masterGuiMap;
+    
+    StreamingSocket socket;
+    boost::lockfree::spsc_queue<std::vector<std::vector<Boids::boidParam_t>>> boidQueue{16};
+    
+#if DECODE_METHOD == 1
+    WavAudioFormat wavFormat;
+    std::unique_ptr<AudioFormatWriter> writer;
+    File file;
+#endif
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioComponent);
 };

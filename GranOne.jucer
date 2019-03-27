@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="hdXcoZ" name="GranOne" projectType="guiapp" jucerVersion="5.4.1"
-              headerPath="/Users/jackcripps/Documents/MME_Proj/cereal-1.2.2/include">
+              headerPath="/Users/jackcripps/Documents/MME_Proj/cereal-1.2.2/include&#10;&#10;/Users/jackcripps/Documents/MME_Proj/snappy-master&#10;&#10;/Users/jackcripps/Documents/MME_Proj/snappy-master/build&#10;&#10;/usr/local/Cellar/boost/1.69.0/include"
+              userNotes="Library Search Path&#10;/Users/jackcripps/Documents/MME_Proj/snappy-master/build">
   <MAINGROUP id="sPu5FQ" name="GranOne">
     <GROUP id="{3760451C-210B-053D-311E-A128BD71A4AF}" name="Source">
       <FILE id="cxtEu9" name="Encoder.cpp" compile="1" resource="0" file="Source/Encoder.cpp"/>
@@ -30,10 +31,10 @@
     </GROUP>
   </MAINGROUP>
   <EXPORTFORMATS>
-    <XCODE_MAC targetFolder="Builds/MacOSX">
+    <XCODE_MAC targetFolder="Builds/MacOSX" externalLibraries="boost_serialization&#10;boost_serialization-mt&#10;snappy&#10;">
       <CONFIGURATIONS>
-        <CONFIGURATION isDebug="1" name="Debug"/>
-        <CONFIGURATION isDebug="0" name="Release"/>
+        <CONFIGURATION isDebug="1" name="Debug" libraryPath="/Users/jackcripps/Documents/MME_Proj/snappy-master/build&#10;&#10;/usr/local/Cellar/boost/1.69.0/lib"/>
+        <CONFIGURATION isDebug="0" name="Release" libraryPath="/Users/jackcripps/Documents/MME_Proj/snappy-master/build&#10;&#10;/usr/local/Cellar/boost/1.69.0/lib"/>
       </CONFIGURATIONS>
       <MODULEPATHS>
         <MODULEPATH id="juce_audio_basics" path="../../../JUCE/modules"/>

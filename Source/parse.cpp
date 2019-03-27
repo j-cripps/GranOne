@@ -342,18 +342,29 @@ std::vector<std::vector<Boids::boidParam_t>> parseXMLBOID(const char * file_path
     }
     printf("Finished parsing\n");
     
+    flockData.shrink_to_fit();
+    /*
     std::stringstream ss;
     
+    // save data to archive
+    {
+        boost::archive::text_oarchive oa(ss);
+        // write class instance to archive
+        oa << flockData;
+        // archive and stream closed when destructors are called
+    }
+
     {
         cereal::BinaryOutputArchive oarchive(ss); // Create an output archive
         
         oarchive(flockData); // Write the data to the archive
     } // archive goes out of scope, ensuring all contents are flushed
-    
+
     std::string s = ss.str();
     long int sSize = s.length();
     std::cout << "Uncompressed Size: " << sSize << std::endl;
     
+    /*
     std::string compressed;
     snappy::Compress(s.data(), s.size(), &compressed);
     long int compressSize = compressed.length();
@@ -363,35 +374,62 @@ std::vector<std::vector<Boids::boidParam_t>> parseXMLBOID(const char * file_path
     snappy::Uncompress(compressed.data(), compressed.size(), &decompressed);
     ss.str() = decompressed;
     
-    std::vector<std::vector<Boids::boidParam_t>> flockDataDecoded;
     
+    std::vector<std::vector<Boids::boidParam_t>> flockDataDecoded;
+    {
+        boost::archive::text_iarchive ia(ss);
+        // read class state from archive
+        ia >> flockDataDecoded;
+    }
     {
         cereal::BinaryInputArchive iarchive(ss); // Create an input archive
         
         iarchive(flockDataDecoded); // Read the data from the archive
     }
-    
+*/
     //return flock_data;
     return flockData;
 };
 
-/*
-Boids::boid_range_t Boids::getBoidRange()
+std::vector<std::vector<Boids::boidParam_t>> convertBoids(std::vector<Boids::boid_struct>& boidStructStack)
 {
-    localBoidRange.x_max_coordinate = x_max_coordinate;
-    localBoidRange.y_max_coordinate = y_max_coordinate;
-    localBoidRange.z_max_coordinate = z_max_coordinate;
-    localBoidRange.x_max_velocity = x_max_velocity;
-    localBoidRange.y_max_velocity = y_max_velocity;
-    localBoidRange.z_max_velocity = z_max_velocity;
+    std::vector<std::vector<Boids::boidParam_t>> boidStack;
     
-    localBoidRange.x_min_coordinate = 0;
-    localBoidRange.y_min_coordinate = 0;
-    localBoidRange.z_min_coordinate = 0;
-    localBoidRange.x_min_velocity = -x_max_velocity;
-    localBoidRange.y_min_velocity = -y_max_velocity;
-    localBoidRange.z_min_velocity = -z_max_velocity;
+    // Loop through the passed in vector of boids and convert them to the correct format for this program
+    for (auto i = 0; i < boidStructStack.size(); ++i)
+    {
+        std::vector<Boids::boidParam_t> individualBoid;
+        individualBoid.resize(numOfBindings);
+        
+        individualBoid[xCoordinate].numType = Boids::intType;
+        individualBoid[xCoordinate].intNum = boidStructStack[i].x_coordinate;
+        
+        individualBoid[yCoordinate].numType = Boids::intType;
+        individualBoid[yCoordinate].intNum = boidStructStack[i].y_coordinate;
+        
+        individualBoid[zCoordinate].numType = Boids::intType;
+        individualBoid[zCoordinate].intNum = boidStructStack[i].z_coordinate;
+        
+        individualBoid[xVelocity].numType = Boids::floatType;
+        individualBoid[xVelocity].floatNum = boidStructStack[i].x_velocity;
+        
+        individualBoid[yVelocity].numType = Boids::floatType;
+        individualBoid[yVelocity].floatNum = boidStructStack[i].y_velocity;
+        
+        individualBoid[zVelocity].numType = Boids::floatType;
+        individualBoid[zVelocity].floatNum = boidStructStack[i].z_velocity;
+        
+        individualBoid[boidID].numType = Boids::intType;
+        individualBoid[boidID].intNum = boidStructStack[i].ID;
+        
+        individualBoid[boidSpecies].numType = Boids::intType;
+        individualBoid[boidSpecies].intNum = boidStructStack[i].species;
+        
+        individualBoid[isBoidActive].numType = Boids::intType;
+        individualBoid[isBoidActive].intNum = boidStructStack[i].active;
+        
+        boidStack.push_back(individualBoid);
+    }
     
-    return localBoidRange;
+    return boidStack;
 }
- */
