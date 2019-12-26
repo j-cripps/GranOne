@@ -19,6 +19,7 @@
 #include <boost/lockfree/spsc_queue.hpp>
 
 #define SCHED_THREAD 0
+#define FILE_BOIDS 0
 #define GRAIN_LIMIT 100
 
 // 0 - Stereo Decode
@@ -61,6 +62,8 @@ private:
     //==============================================================================
     void setupGrainStack();
     
+    void networkFunction();
+    
     //==============================================================================
     Grain createGrainFromBoid(std::vector<Boids::boidParam_t>* boid, std::vector<Boids::boidParam_t>* range);
     void generateGrainFromBoid(Grain* grain, std::vector<Boids::boidParam_t>* boid, std::vector<Boids::boidParam_t>* range);
@@ -90,7 +93,9 @@ private:
     guiMap_t* masterGuiMap;
     
     StreamingSocket socket;
-    boost::lockfree::spsc_queue<std::vector<std::vector<Boids::boidParam_t>>> boidQueue{16};
+    boost::lockfree::spsc_queue<std::vector<std::vector<Boids::boidParam_t>>> boidQueue{4};
+    char buffer[50000];
+    std::vector<Boids::boid_struct> decoded;
     
 #if DECODE_METHOD == 1
     WavAudioFormat wavFormat;

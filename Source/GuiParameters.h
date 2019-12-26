@@ -18,7 +18,7 @@
 
 #define RANGE_MASTER_VOL_MIN 0.0f
 #define RANGE_MASTER_VOL_MAX 1.0f
-#define INIT_MASTER_VOL 1.0f
+#define INIT_MASTER_VOL 0.3f
 
 #define INIT_ENV_TYPE kTukey
 
@@ -29,12 +29,12 @@
 #define INIT_START_POS_BIND xCoordinate
 
 #define RANGE_ONSET_MIN 1
-#define RANGE_ONSET_MAX 2000
+#define RANGE_ONSET_MAX 8000
 #define INIT_ONSET_MIN 50
 #define INIT_ONSET_MAX 500
 #define INIT_ONSET_BIND yCoordinate
 
-#define RANGE_LENGTH_MIN 1
+#define RANGE_LENGTH_MIN 5
 #define RANGE_LENGTH_MAX 2000
 #define INIT_LENGTH_MIN 200
 #define INIT_LENGTH_MAX 1000

@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Bucket
+   uuid = "13B593E3-2A42-4446-A699-2FA7681391F0"
    type = "1"
    version = "2.0">
    <Breakpoints>
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.SymbolicBreakpoint">
          <BreakpointContent
+            uuid = "B22A2EF7-CC49-47E6-A273-B1B93D37CB3B"
             shouldBeEnabled = "Yes"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
@@ -13,6 +15,7 @@
             moduleName = "">
             <Locations>
                <Location
+                  uuid = "B22A2EF7-CC49-47E6-A273-B1B93D37CB3B - 9d096611641b4e7c"
                   shouldBeEnabled = "Yes"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
@@ -25,35 +28,25 @@
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         BreakpointExtensionID = "Xcode.Breakpoint.RuntimeIssueBreakpoint">
          <BreakpointContent
+            uuid = "21174CF1-E07B-4858-8252-78298D775187"
             shouldBeEnabled = "Yes"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "../../Source/AudioComponent.cpp"
-            timestampString = "575307873.727783"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "292"
-            endingLineNumber = "292"
-            landmarkName = "AudioComponent::run()"
-            landmarkType = "7">
+            breakpointStackSelectionBehavior = "1"
+            type = "1">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         BreakpointExtensionID = "Xcode.Breakpoint.RuntimeIssueBreakpoint">
          <BreakpointContent
+            uuid = "9136CBAD-0270-457E-9059-88B00F8B96A7"
             shouldBeEnabled = "Yes"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "../../Source/AudioComponent.cpp"
-            timestampString = "575307873.72817"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "283"
-            endingLineNumber = "283"
-            landmarkName = "AudioComponent::run()"
-            landmarkType = "7">
+            breakpointStackSelectionBehavior = "1"
+            type = "2">
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

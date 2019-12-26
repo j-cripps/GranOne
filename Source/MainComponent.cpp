@@ -429,7 +429,11 @@ void MainComponent::resized()
 
 void MainComponent::openButtonClicked()
 {
-    FileChooser chooser("Choose a WAV file shorter than 20 seconds", {}, "*.wav", "*.aiff");
+    // Search for default file section, if not present then just go to current working directory
+    File file("/Users/jackcripps/Documents/MME_Proj/Samples");
+    if (!file.isDirectory()) file.getCurrentWorkingDirectory();
+    
+    FileChooser chooser("Choose a WAV file shorter than 20 seconds", file, "*.wav");
     
     if (chooser.browseForFileToOpen())
     {
@@ -464,7 +468,7 @@ void MainComponent::checkForPathToOpen()
         {
             auto duration = reader->lengthInSamples/ reader->sampleRate;
             
-            if (duration < 20)
+            if (duration < 100)
             {
                 ReferenceCountedBuffer::Ptr newBuffer = new ReferenceCountedBuffer(file.getFileName(),
                                                                                    reader->numChannels,

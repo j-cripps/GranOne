@@ -16,14 +16,20 @@ AudioComponent::AudioComponent(guiMap_t* guiMap)
     // Resize the array to be the correct size
     boidRanges.resize(numberOfMaxBindings);
     
+#if FILE_BOIDS == 1
     // Add all the XML files to the boidStack
-    for (auto i = 0; i < 2400; ++i)
+    for (auto i = 0; i < 3000; ++i)
     {
-        const std::string tempString = ("/Users/jackcripps/Documents/MME_Proj/Flocking data 1847 100319/" + std::to_string(i) + "_flocking_data.xml");
+        const std::string tempString = ("/Users/jackcripps/Documents/MME_Proj/Flocking 270319/" + std::to_string(i) + "_flocking_data.xml");
         std::vector<std::vector<Boids::boidParam_t>> boidStruct = parseXMLBOID(tempString.data(), &boidRanges);
         boidStructStack.push_back(boidStruct);
     }
+#else
     
+    getBoidRanges(&boidRanges);
+    
+#endif
+
     // specify the number of input and output channels that we want to open
 #if DECODE_METHOD == 1
     setAudioChannels (0, 4);
@@ -35,9 +41,9 @@ AudioComponent::AudioComponent(guiMap_t* guiMap)
                                            {},
                                            0));
 #elif DECODE_METHOD == 2
-    setAudioChannels(0, 4);
+    setAudioChannels(0, 16);
 #else
-    setAudioChannels(0, 2);
+    setAudioChannels(0,2);
 #endif
     
     // Register audio formats
@@ -51,6 +57,11 @@ AudioComponent::AudioComponent(guiMap_t* guiMap)
     if (socketOpened) std::cout << "Socket Opened" << std::endl;
     std::cout << "Host Name: " << socket.getHostName() << std::endl;
     
+//    while (1)
+//    {
+//        AudioComponent::networkFunction();
+//    }
+    
     // Start the thread to manage scheduler
     startThread();
     
@@ -58,6 +69,7 @@ AudioComponent::AudioComponent(guiMap_t* guiMap)
     // Essentially starts the process from the beginning again if it's in offline mode (XML)
     refreshGuiMap();
     
+#if FILE_BOIDS == 1
     if (!grainStack.empty()) grainStack.clear();
     
     for (auto i = 0; i < boidStructStack[boidFrame].size(); ++i)
@@ -66,6 +78,7 @@ AudioComponent::AudioComponent(guiMap_t* guiMap)
     }
     // Start the boid frame count again
     boidFrame = 1;
+#endif
 }
 
 AudioComponent::~AudioComponent()
@@ -145,6 +158,7 @@ void AudioComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFi
         // 'Reset' the counter
         millisecondCount = currentTime;
         
+#if FILE_BOIDS == 1
         // Check if boid frame is less than boidStructStack size, if not then stop generating new grains
         if (boidFrame < boidStructStack.size())
         {
@@ -167,48 +181,42 @@ void AudioComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFi
             }
             ++boidFrame;
         }
+#else
+        refreshGuiMap();
         
-        // Iterate over all the boids
-        // If the boid is not active then set the grain to not active
-        // Once the scheduler has finished do boidFrame++
+        std::vector<std::vector<Boids::boidParam_t>> tempBoidStack;
+        bool ret = boidQueue.pop(tempBoidStack);
         
-        /*
-        // Delete grains
-        if (grainStack.size() > 0)
+        if (ret == false)
         {
-            for (auto i = grainStack.size() - 1; i >= 0; --i)
+            std::cout << "Cannot pop from network buffer" << std::endl;
+        }
+        else
+        {
+            if (grainStack.empty())
+            {
+                // Generate a new stack of grains from the boids
+                for (auto i = 0; i < tempBoidStack.size(); ++i)
+                {
+                    grainStack.push_back(createGrainFromBoid(&tempBoidStack[i], &boidRanges));
+                }
+            }
+            
+            for (auto  i = 0; i < grainStack.size(); ++i)
             {
                 auto grainEnd = grainStack[i].onset + grainStack[i].length;
                 auto hasEnded = grainEnd < time;
                 if (hasEnded)
                 {
-                    grainStack.remove(i);
+                    generateGrainFromBoid(&grainStack[i], &tempBoidStack[i], &boidRanges);
                 }
-                //std::cout   << "hasEnded: "     << hasEnded
-                //      << "\tgrainEnd: "   << grainEnd
-                //      << "\ttime: "       << time
-                //      << std::endl;
+                else
+                {
+                    updateGrainFromBoid(&grainStack[i], &tempBoidStack[i], &boidRanges);
+                }
             }
         }
-        
-        // Add grains
-        if (currentBuffer != nullptr)
-        {
-            if (grainStack.size() < GRAIN_LIMIT)
-            {
-                
-                auto nSamples = currentBuffer->getAudioSampleBuffer()->getNumSamples();
-                int onset = offsetNum;
-                int length = lengthNum;
-                int startPosition = startNum;
-                for (int i = 0; i < 1; ++i)
-                {
-                    //grainStack.add(Grain((int)time + onset, length, wrap(startPosition, 0, nSamples), kTukey, 0.1, panNum, rateNum));
-                }
-                std::cout << grainStack.size() << std::endl;
-            }
-         }
-         */
+#endif
     }
     
     const auto nInputChannels = buffer->getNumChannels();
@@ -226,14 +234,17 @@ void AudioComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFi
             {
                 if (time <= (grainStack[i].onset + grainStack[i].length))
                 {
+                    if (grainStack[i].isActive)
+                    {
                     //std::cout << i << ": " << "time: " << time << "onset + length: " << (grainStack[i].onset + grainStack[i].length) << std::endl;
-                    grainStack[i].processAudio(bufferToFill.buffer,
-                                               *buffer,
-                                               nInputChannels,
-                                               nOutputChannels,
-                                               nOutputSamplesRemaining,
-                                               nInputSamples,
-                                               time);
+                        grainStack[i].processAudio(bufferToFill.buffer,
+                                                   *buffer,
+                                                   nInputChannels,
+                                                   nOutputChannels,
+                                                   nOutputSamplesRemaining,
+                                                   nInputSamples,
+                                                   time);
+                    }
                 }
             }
         }
@@ -262,52 +273,9 @@ void AudioComponent::run()
     while (!threadShouldExit())
     {
         std::cout << "Network Thread Entered" << std::endl;
-        char buffer[20000];
-        std::vector<Boids::boid_struct> decoded;
-        socket.connect("192.168.0.3", 80, 1000);
-        int ready = socket.waitUntilReady(false, 1000);
-        if (ready == 1)
-        {
-            
-            std::cout << "Ready for Reading" << std::endl;
-            // Ready for reading
-            socket.read(&buffer, 20000, true);
-            std::string lengthString(&buffer[0], 4);
-            std::string test(&buffer[0], 10445);
-            std::cout << "Packet Length: " << test.length() << std::endl;
-            std::cout << test << std::endl;
-            std::string bufToDecode(&buffer[0], 10445);
-            std::istringstream ss(bufToDecode);
-            std::cout << "StringStream Length: " << ss.str().length() << std::endl;
-            {
-                boost::archive::text_iarchive ia(ss);
-                // read class state from archive
-                ia >> decoded;
-            }
-    
-            std::cout << "Vector size: " << decoded.size() << std::endl;
-            
-            // Convert the boid struct stack received from the network and push into the lock free ring buffer
-            // so that the audio thread can pop it out the other side and use it to generate grains
-            bool pushed = boidQueue.push(convertBoids(decoded));
-            if (pushed == false)
-            {
-                std::cout << "Could not push boid struct stack into queue" << std::endl;
-            }
-        }
-        else if (ready == 0)
-        {
-            // Time out
-            std::cout << "Network Time Out" << std::endl;
-        }
-        else
-        {
-            // Error
-            std::cout << "Network Error" << std::endl;
-        }
         
+        AudioComponent::networkFunction();
         
-        wait(10000);
         std::cout << "Network Thread Exit" << std::endl;
     }
 }
@@ -409,6 +377,56 @@ void AudioComponent::setupGrainStack()
     }
 }
 
+void AudioComponent::networkFunction()
+{
+    
+    // Timing
+    double before = Time::getMillisecondCounterHiRes();
+    socket.connect("192.168.0.2", 80, 1000);
+    
+    int ready = socket.waitUntilReady(false, 1000);
+    if (ready == 1)
+    {
+        //std::cout << "Ready for Reading" << std::endl;
+        // Ready for reading
+        socket.read(&buffer[0], 50000, true);
+        //std::cout << test << std::endl;
+        std::string bufToDecode(&buffer[0]);
+        std::stringstream ss(bufToDecode, std::ios_base::in|std::ios_base::out|std::ios_base::binary);
+        //std::cout << "StringStream Length: " << ss.str().length() << std::endl;
+        
+        {
+            boost::archive::text_iarchive ia(ss);
+            // read class state from archive
+            ia >> decoded;
+        }
+        
+        // Convert the boid struct stack received from the network and push into the lock free ring buffer
+        // so that the audio thread can pop it out the other side and use it to generate grains
+        bool pushed = boidQueue.push(convertBoids(decoded));
+        
+        double after = Time::getMillisecondCounterHiRes();
+        
+        std::cout << "Elapsed Time (ms): " << after - before << std::endl;
+        if (pushed == false)
+        {
+            std::cout << "Could not push boid struct stack into queue" << std::endl;
+        }
+    }
+    else if (ready == 0)
+    {
+        // Time out
+        std::cout << "Network Time Out" << std::endl;
+    }
+    else
+    {
+        // Error
+        std::cout << "Network Error" << std::endl;
+    }
+    
+    wait(40);
+}
+
 //==============================================================================
 Grain AudioComponent::createGrainFromBoid(std::vector<Boids::boidParam_t>* boid, std::vector<Boids::boidParam_t>* range)
 {
@@ -506,10 +524,10 @@ Grain AudioComponent::createGrainFromBoid(std::vector<Boids::boidParam_t>* boid,
     if (rateParam.numType == Boids::intType)
     {
         localPlaybackRate = floatMap((float)rateParam.intNum,
-                                     (float)(*range)[(localGuiMap.rateBinding * 2)].intNum,
-                                     (float)(*range)[(localGuiMap.rateBinding * 2) + 1].intNum,
-                                     localGuiMap.grainRateMin,
-                                     localGuiMap.grainRateMax);
+                                   (float)(*range)[(localGuiMap.rateBinding * 2)].intNum,
+                                   (float)(*range)[(localGuiMap.rateBinding * 2) + 1].intNum,
+                                   localGuiMap.grainRateMin,
+                                   localGuiMap.grainRateMax);
     }
     else
     {
@@ -519,20 +537,6 @@ Grain AudioComponent::createGrainFromBoid(std::vector<Boids::boidParam_t>* boid,
                                      localGuiMap.grainRateMin,
                                      localGuiMap.grainRateMax);
     }
-    /*
-    if (abs(boid->x_velocity) >= 4 || abs(boid->y_velocity) >= 4 || abs(boid->z_velocity) >= 4)
-    {
-        localPlaybackRate = 2.0;
-    }
-    else if (abs(boid->x_velocity) >= 2 || abs(boid->y_velocity) >= 2 || abs(boid->z_velocity) >= 2)
-    {
-        localPlaybackRate = 1.0;
-    }
-    else
-    {
-        localPlaybackRate = 0.5;
-    }
-     */
     
     return Grain((*boid)[boidID].intNum, (*boid)[isBoidActive].intNum, time + localOnset, localLength, localStartPosition, localEnv, localAmplitude, localPanPosition, localGuiMap.grainRateMax, (*boid)[xCoordinate].intNum, (*boid)[yCoordinate].intNum, (*boid)[zCoordinate].intNum);
 }
@@ -573,7 +577,7 @@ void AudioComponent::generateGrainFromBoid(Grain* grain, std::vector<Boids::boid
     }
     else
     {
-        localOnset = floatMap(onsetParam.intNum,
+        localOnset = floatMap(onsetParam.floatNum,
                               (*range)[(localGuiMap.onsetBinding * 2)].floatNum,
                               (*range)[(localGuiMap.onsetBinding * 2) + 1].floatNum,
                               (float)localGuiMap.grainOnsetMin,
@@ -642,20 +646,7 @@ void AudioComponent::generateGrainFromBoid(Grain* grain, std::vector<Boids::boid
                                      localGuiMap.grainRateMin,
                                      localGuiMap.grainRateMax);
     }
-    /*
-    if (abs(boid->x_velocity) >= 4 || abs(boid->y_velocity) >= 4 || abs(boid->z_velocity) >= 4)
-    {
-        localPlaybackRate = 2.0;
-    }
-    else if (abs(boid->x_velocity) >= 2 || abs(boid->y_velocity) >= 2 || abs(boid->z_velocity) >= 2)
-    {
-        localPlaybackRate = 1.0;
-    }
-    else
-    {
-        localPlaybackRate = 0.5;
-    }
-     */
+
     grain->playbackRate = localPlaybackRate;
     
     grain->isActive = (*boid)[isBoidActive].intNum;

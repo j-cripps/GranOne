@@ -69,6 +69,10 @@
 			isa = PBXBuildFile;
 			fileRef = 29FB2E6DCAC682994541CF0D;
 		};
+		5FCF7DFF502BAABD167390B3 = {
+			isa = PBXBuildFile;
+			fileRef = 96B15A54D3CCF48C95A0A809;
+		};
 		9A1FEC9BD94595BB7DB65B9F = {
 			isa = PBXBuildFile;
 			fileRef = F88D036091EB932C11E6CA93;
@@ -252,6 +256,13 @@
 			path = "../../JuceLibraryCode/include_juce_cryptography.mm";
 			sourceTree = "SOURCE_ROOT";
 		};
+		45C6A8D092DF643B19EC979F = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			name = Decoder.h;
+			path = ../../Source/Decoder.h;
+			sourceTree = "SOURCE_ROOT";
+		};
 		4AF2E34418A1B24DCBBDDED9 = {
 			isa = PBXFileReference;
 			lastKnownFileType = sourcecode.cpp.objcpp;
@@ -404,6 +415,13 @@
 			lastKnownFileType = sourcecode.cpp.objcpp;
 			name = "include_juce_audio_formats.mm";
 			path = "../../JuceLibraryCode/include_juce_audio_formats.mm";
+			sourceTree = "SOURCE_ROOT";
+		};
+		96B15A54D3CCF48C95A0A809 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			name = Decoder.cpp;
+			path = ../../Source/Decoder.cpp;
 			sourceTree = "SOURCE_ROOT";
 		};
 		96B9B4351622A39C5D433451 = {
@@ -619,6 +637,8 @@
 		D0A76C2AE61401411709CD8D = {
 			isa = PBXGroup;
 			children = (
+				96B15A54D3CCF48C95A0A809,
+				45C6A8D092DF643B19EC979F,
 				F88D036091EB932C11E6CA93,
 				2974ACC0802465706D7EF5A2,
 				6FDDDD1E588B52E271808DE0,
@@ -974,6 +994,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5FCF7DFF502BAABD167390B3,
 				9A1FEC9BD94595BB7DB65B9F,
 				FAF4B6BC982C1EFBF7B9E485,
 				4BF3100094C2262667FE9C45,

@@ -28,7 +28,7 @@ Grain::Grain(int boidID, bool isActive, unsigned long long int onset, const int 
     if (panPosition > 1.0) panPosition = 1.0;
     if (panPosition < -1.0) panPosition = -1.0;
     
-    // No support for negative or 0 playback rates, so bind to sufficiently smal value
+    // No support for negative or 0 playback rates, so bind to sufficiently small value
     if (playbackRate < 0.001) playbackRate = 0.001;
     
     // If length is less than 10 samples then always use a rectangular envelope, as the functions differ very little
@@ -77,31 +77,36 @@ void Grain::processAudio(AudioBuffer<float>* bufferToFill,
                          int nBufSamples,
                          unsigned long long int time)
 {
-#if DECODE_METHOD == 2
+
     float azimuth = getAzimuthAngle(xCoord, yCoord, zCoord);
     float elevation = getElevationAngle(xCoord, yCoord, zCoord);
-#endif
+    float distance = getRadialDistance(xCoord, yCoord, zCoord, elevation);
     
-    for (auto channel = 0; channel < nOutputChannels; ++channel)
+    const auto* fileData = buffer.getReadPointer(0);
+    
+    float position = (time - onset) * playbackRate;
+    int ceilSample = (int)std::ceil(position);
+    
+    float eta = ceilSample - position;
+    
+    float y0 = fileData[(ceilSample + startPosition) % nBufSamples];
+    float y1 = fileData[((ceilSample + startPosition) - 1) % nBufSamples];
+    float y2 = fileData[((ceilSample + startPosition) - 2) % nBufSamples];
+    float y3 = fileData[((ceilSample + startPosition) - 3) % nBufSamples];
+    
+    //float outputSample = linearInterpolant(eta, currentSamp, previousSamp);
+    float outputSample = cubicInterpolant(eta, y3, y2, y1, y0);
+    
+    float W = encodeW((outputSample * calculateEnvAtCurrentSample(time)));
+    float X = encodeX((outputSample * calculateEnvAtCurrentSample(time)), azimuth, elevation, distance);
+    float Y = encodeY((outputSample * calculateEnvAtCurrentSample(time)), azimuth, elevation, distance);
+    float Z = encodeZ((outputSample * calculateEnvAtCurrentSample(time)), elevation, distance);
+    float D = encodeD((outputSample * calculateEnvAtCurrentSample(time)), distance);
+    
+    for (auto channel = 8; channel < nOutputChannels; ++channel)
     {
         auto* channelData = bufferToFill->getWritePointer(channel);
-        const auto* fileData = buffer.getReadPointer(channel % nInputChannels);
-        
-        float position = (time - onset) * playbackRate;
-        int ceilSample = (int)std::ceil(position);
-        
-        //std::cout << "ID: " << this->boidID << "\t" << "Pos: " << position << "\t" << "Amp: " << this->amplitude << "\t" << "pan: " << this->panPosition << std::endl;
-        
-        float eta = ceilSample - position;
-        
-        float y0 = fileData[(ceilSample + startPosition) % nBufSamples];
-        float y1 = fileData[((ceilSample + startPosition) - 1) % nBufSamples];
-        float y2 = fileData[((ceilSample + startPosition) - 2) % nBufSamples];
-        float y3 = fileData[((ceilSample + startPosition) - 3) % nBufSamples];
-        
-        //float outputSample = linearInterpolant(eta, currentSamp, previousSamp);
-        float outputSample = cubicInterpolant(eta, y3, y2, y1, y0);
-        
+
 #if DECODE_METHOD == 0
         if (channel == 0)
         {
@@ -133,38 +138,56 @@ void Grain::processAudio(AudioBuffer<float>* bufferToFill,
         }
         else
         {
-            std::cout << "Stereo Channel Number Exceeded" << std::endl;
+            channelData[time % nBufToFillSamples] = 0.0f;
         }
 #elif DECODE_METHOD == 2
         
-        if (channel == 0)       // W
+        
+        if (channel == 8)
         {
-            channelData[time % nBufToFillSamples] += encodeW((outputSample * calculateEnvAtCurrentSample(time)), azimuth, elevation);
+            channelData[time % nBufToFillSamples] += decodedSpeakerSignal(W, X, Y, Z, D, 0.524, 0, distance);
         }
-        else if (channel == 1)  // X
+        else if (channel == 9)
         {
-            channelData[time % nBufToFillSamples] += encodeX((outputSample * calculateEnvAtCurrentSample(time)), azimuth, elevation);
+            channelData[time % nBufToFillSamples] += decodedSpeakerSignal(W, X, Y, Z, D, 1.047, 0, distance);
         }
-        else if (channel == 2)  // Y
+        else if (channel == 10)
         {
-            channelData[time % nBufToFillSamples] += encodeY((outputSample * calculateEnvAtCurrentSample(time)), azimuth, elevation);
+            channelData[time % nBufToFillSamples] += decodedSpeakerSignal(W, X, Y, Z, D, 1.981, 0, distance);
         }
-        else if (channel == 3)  // Z
+        else if (channel == 11)
         {
-            channelData[time % nBufToFillSamples] += encodeZ((outputSample * calculateEnvAtCurrentSample(time)), azimuth, elevation);
+            channelData[time % nBufToFillSamples] += decodedSpeakerSignal(W, X, Y, Z, D, 2.775, 0, distance);
+        }
+        else if (channel == 12)
+        {
+            channelData[time % nBufToFillSamples] += decodedSpeakerSignal(W, X, Y, Z, D, -2.574, 0, distance); //3.709 +
+        }
+        else if (channel == 13)
+        {
+            channelData[time % nBufToFillSamples] += decodedSpeakerSignal(W, X, Y, Z, D, -1.309, 0, distance); //4.451 +
+        }
+        else if (channel == 14)
+        {
+            channelData[time % nBufToFillSamples] += decodedSpeakerSignal(W, X, Y, Z, D, -1.0472, 0, distance); //5.236 +
+        }
+        else if (channel == 15)
+        {
+            channelData[time % nBufToFillSamples] += decodedSpeakerSignal(W, X, Y, Z, D, -0.523, 0, distance); //5.760 +
         }
         else
         {
-            std::cout << "Ambisonic Channel Number Exceeded" << std::endl;
+            channelData[time % nBufToFillSamples] = 0.0f;
+            std::cout << "Ambisonic Decode Channel Error" << std::endl;
         }
         
 #else
         
-        std::cout << "Ambisonic Decode Channel Error" << std::endl;
+        std::cout << "Ambisonic Decode Compile Error" << std::endl;
         
 #endif
+
     }
-    //std::cout <<"time: " << time << "onset + length: " << onset + length << "Array Index: " << (length - 1) - ((onset + length) - (int)time) << std::endl;
 }
 
 void Grain::constructEnvelope(std::shared_ptr<Array<float, CriticalSection>> envBuffer)

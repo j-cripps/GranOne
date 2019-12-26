@@ -14,6 +14,7 @@
 #include "Envelope.h"
 #include "parse.hpp"
 #include "Encoder.h"
+#include "Decoder.h"
 //#include "AudioComponent.h"
 
 #define SCHED_ENV 0

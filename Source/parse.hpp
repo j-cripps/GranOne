@@ -25,20 +25,22 @@
 #include <boost/archive/binary_iarchive.hpp>
 
 #define DECODE_METHOD 2
+#define TEST_SERIAL 1
 
 class Boids
 {
 public:
+    friend class boost::serialization::access;
     
     typedef struct neighbourhood_data_struct
     {
-        uint32_t x_avg_coordinate;
-        uint32_t y_avg_coordinate;
-        uint32_t z_avg_coordinate;
+        int32_t x_avg_coordinate;
+        int32_t y_avg_coordinate;
+        int32_t z_avg_coordinate;
         float x_avg_velocity;
         float y_avg_velocity;
         float z_avg_velocity;
-        std::vector<int> neighbour_IDs;
+        std::vector<uint16_t> neighbour_IDs;
         
         /* Cereal version
         template <class Archive>
@@ -65,12 +67,12 @@ public:
     
     typedef struct boid_struct
     {
-        uint32_t ID;
-        uint32_t x_coordinate;
-        uint32_t y_coordinate;
-        uint32_t z_coordinate;
-        uint32_t active;
-        uint32_t species;
+        uint16_t ID;
+        int32_t x_coordinate;
+        int32_t y_coordinate;
+        int32_t z_coordinate;
+        uint8_t active;
+        uint8_t species;
         float x_velocity;
         float y_velocity;
         float z_velocity;
@@ -130,8 +132,17 @@ public:
         void serialize(Archive & ar, const unsigned int version)
         {
             ar & numType;
-            ar & intNum;
-            ar & floatNum;
+            
+            // Because this is a union, we only want to store the relevant
+            // variable as the other contains junk
+            if (numType == Boids::intType)
+            {
+                ar & intNum;
+            }
+            else
+            {
+                ar & floatNum;
+            }
         }
         
     } boidParam_t;
@@ -178,5 +189,12 @@ std::vector<std::vector<Boids::boidParam_t>> parseXMLBOID(const char * file_path
 
 // Convert boid_struct to boidParam_t
 std::vector<std::vector<Boids::boidParam_t>> convertBoids(std::vector<Boids::boid_struct>& boidStruct);
+
+// Convert boidParam_t to boid_struct
+std::vector<Boids::boid_struct> convertBoidsBack(std::vector<std::vector<Boids::boidParam_t>>& boidStack, std::vector<Boids::boid_struct>& nID);
+
+// Set the boid ranghes
+
+void getBoidRanges(std::vector<Boids::boidParam_t>* boidRange);
 
 #endif /* parse_hpp */
