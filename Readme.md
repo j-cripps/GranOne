@@ -1,4 +1,4 @@
-Final Year University Group Project:
+Final Year University Project:
 
 - An Exploration into the Links Between Emergent Behaviour and Granular Synthesis, Assessing their Learning Potential in a Multimodal, Interactive Environment
 
