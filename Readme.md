@@ -1,3 +1,5 @@
+Note: Project still heavily in development phase and will not compile easily, when in a half-decent state, executables and modification instructions for others will be here :)
+
 Final Year University Project:
 
 - An Exploration into the Links Between Emergent Behaviour and Granular Synthesis, Assessing their Learning Potential in a Multimodal, Interactive Environment
